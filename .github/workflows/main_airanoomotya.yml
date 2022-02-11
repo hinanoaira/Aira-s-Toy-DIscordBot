@@ -22,11 +22,13 @@ jobs:
           node-version: '16.x'
 
       - name: npm install, build, and test
-        env:
-          TOKEN: ${{secrets.TOKEN}}
         run: |
-          npm install
+          npm ci
           npm run compile
+  
+      - name: remove unused dependencies
+        run: |
+          npm ci --production
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v2
