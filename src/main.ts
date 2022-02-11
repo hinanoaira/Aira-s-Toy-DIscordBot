@@ -1,7 +1,5 @@
 import { Message, Client } from 'discord.js'
-import dotenv from 'dotenv'
 import { from } from 'linq-to-typescript'
-dotenv.config()
 
 const client = new Client({
   intents: ['GUILDS', 'GUILD_MEMBERS', 'GUILD_MESSAGES']
