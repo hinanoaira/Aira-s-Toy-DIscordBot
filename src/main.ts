@@ -68,14 +68,14 @@ client.on('messageCreate', async (message: Message) => {
   if (messageData) {
     await message.channel.send(dice(messageData[0]))
   }
-  messageData = message.content.match(/^res\(([1-9][0-9]*)-([1-9][0-9]*)\)$/)
+  messageData = message.content.match(/^res\(([1-9][0-9]*)-([1-9][0-9]*)\)/)
   if (messageData) {
     const me = Number(messageData[1])
     const you = Number(messageData[2])
     const threshold = 50 + ((me - you) * 5)
     await message.channel.send(dice(`1d100<=${threshold}`))
   }
-  messageData = message.content.match(/^cbr\(([1-9][0-9]*),([1-9][0-9]*)\)$/)
+  messageData = message.content.match(/^cbr\(([1-9][0-9]*),([1-9][0-9]*)\)/)
   if (messageData) {
     const one = Number(messageData[1])
     const two = Number(messageData[2])
