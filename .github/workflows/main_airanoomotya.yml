@@ -19,13 +19,13 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v1
         with:
-          node-version: '16.x'
+          node-version: "16.x"
 
       - name: npm install, build, and test
         run: |
           npm ci
           npm run build
-  
+
       - name: remove unused dependencies
         run: |
           npm ci --production
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: 'Production'
+      name: "Production"
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
@@ -49,11 +49,11 @@ jobs:
         with:
           name: node-app
 
-      - name: 'Deploy to Azure Web App'
+      - name: "Deploy to Azure Web App"
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'airanoomotya'
-          slot-name: 'Production'
+          app-name: "airanoomotya"
+          slot-name: "Production"
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_027805206221467EA4FAE4EA32E3F63C }}
           package: .
