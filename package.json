@@ -2,11 +2,11 @@
   "name": "typescripttest",
   "version": "1.0.0",
   "description": "",
-  "main": "build/main.js",
+  "main": "dist/main.js",
   "scripts": {
     "test": "ts-node src/main.ts",
-    "start": "node build/main.js",
-    "compile": "tsc -p ."
+    "start": "node dist/main.js",
+    "build": "tsc -p ."
   },
   "keywords": [],
   "author": "",
