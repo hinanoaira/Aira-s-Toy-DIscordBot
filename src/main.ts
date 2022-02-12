@@ -1,5 +1,4 @@
 import { Message, Client, ApplicationCommandDataResolvable } from "discord.js";
-import { from } from "linq-to-typescript";
 import express from "express";
 
 const token = process.env.TOKEN;
@@ -118,24 +117,15 @@ function thresholdCheck(num: Number, threshold: Number, lessThan: Boolean) {
 }
 function diceExec(diceData: string) {
   if (diceData.match(/d/)) diceData = diceData.replace("d", "D");
-  const diceCommand = from(
-    String(diceData.match(/^[1-9][0-9]*[dD][1-9][0-9]*/)).split("D")
-  )
-    .select((item) => Number(item))
-    .toArray();
+  const diceCommand = String(diceData.match(/^[1-9][0-9]*[D][1-9][0-9]*/))
+    .split("D")
+    .map((item) => Number(item));
 
-  // NOTE: ↑はこう書いてもいいかも
-  // const diceCommand = String(diceData.match(/^[1-9][0-9]*[dD][1-9][0-9]*/)).split("D").map(item => Number(item));
+  const results = Array(diceCommand[0]).map((_) =>
+    getRandomInt(diceCommand[1])
+  );
 
-  const results = [];
-  for (let i = 0; i < diceCommand[0]; i++) {
-    results[i] = getRandomInt(diceCommand[1]);
-  }
-
-  // NOTE: ↑はこうすると1行で書ける
-  // const results = Array(diceCommand[0]).map(_ => getRandomInt(diceCommand[1]))
-
-  let ans: string = `(${diceData}) → `;
+  let ans = `(${diceData}) → `;
   const total = arraySum(results);
   if (diceCommand[0] === 1) ans += String(total);
   else ans += `${total}[${results.join(",")}] → ${total}`;
@@ -184,6 +174,8 @@ function diceBuild(message: String) {
     const threshold = 50 + (me - you) * 5;
     return `1d100<=${threshold}`;
   }
+
+  // cbr
   messageData = message.match(/^cbr\(([1-9][0-9]*),([1-9][0-9]*)\)/);
   if (messageData) {
     const one = Number(messageData[1]);
