@@ -74,6 +74,10 @@ client.on("interactionCreate", async (interaction) => {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
+    if (!diceData) {
+      await interaction.reply("こまんどがへんです。。。");
+      return;
+    }
     const ans = diceExec(diceData);
     await interaction.reply({ content: ans });
     return;
@@ -82,6 +86,10 @@ client.on("interactionCreate", async (interaction) => {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
+    if (!diceData) {
+      await interaction.reply("こまんどがへんです。。。");
+      return;
+    }
     const ans = diceExec(diceData);
     await interaction.channel?.send(
       `${interaction.user.username} > シークレットダイス`
@@ -182,12 +190,12 @@ function diceBuild(message: String) {
     const two = Number(messageData[2]);
     return `1d100<=${one},${two}`;
   }
-  return "";
+  return null;
 }
 
 client.on("messageCreate", async (message: Message) => {
   const diceData = diceBuild(message.content);
-  if (diceData !== "") {
+  if (diceData) {
     await message.reply(diceExec(diceData));
     return;
   }
