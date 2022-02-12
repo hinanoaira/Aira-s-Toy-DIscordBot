@@ -1,13 +1,57 @@
-import { Message, Client } from "discord.js";
+import { Message, Client, ApplicationCommandDataResolvable } from "discord.js";
 import { from } from "linq-to-typescript";
+
+const token = process.env.TOKEN;
+if (token === undefined) throw Error("token invalid");
 
 const client = new Client({
   intents: ["GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES"],
 });
 
-client.once("ready", () => {
-  console.log("Ready!");
+client.once("ready", async () => {
   console.log(client.user?.tag);
+  const data: ApplicationCommandDataResolvable[] = [
+    {
+      name: "ping",
+      description: "Replies with Pong!",
+    },
+    {
+      name: "secretdice",
+      description: "やばいお",
+      options: [
+        {
+          type: "STRING",
+          name: "dice",
+          description: "ダイスコマンド",
+          required: true,
+        },
+      ],
+    },
+  ];
+  try {
+    await client.application?.commands.set(data, "793096144678682634");
+  } catch (e) {
+    console.log(e);
+  }
+  console.log("Ready!");
+});
+
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isCommand()) {
+    return;
+  }
+  if (interaction.commandName === "ping") {
+    await interaction.reply("pong!");
+    return;
+  }
+  if (interaction.commandName === "secretdice") {
+    const arg = interaction.options.data[0].value;
+    if (typeof arg !== "string") return;
+    const diceData = diceBuild(arg);
+    const ans = diceExec(diceData);
+    await interaction.reply({ content: ans, ephemeral: true });
+    await interaction.reply("シークレットダイス");
+  }
 });
 
 function getRandomInt(max: number) {
@@ -28,17 +72,25 @@ function thresholdCheck(num: Number, threshold: Number, lessThan: Boolean) {
     return num <= threshold;
   }
 }
-function dice(diceData: string) {
+function diceExec(diceData: string) {
   if (diceData.match(/d/)) diceData = diceData.replace("d", "D");
   const diceCommand = from(
     String(diceData.match(/^[1-9][0-9]*[dD][1-9][0-9]*/)).split("D")
   )
     .select((item) => Number(item))
     .toArray();
+
+  // NOTE: ↑はこう書いてもいいかも
+  // const diceCommand = String(diceData.match(/^[1-9][0-9]*[dD][1-9][0-9]*/)).split("D").map(item => Number(item));
+
   const results = [];
   for (let i = 0; i < diceCommand[0]; i++) {
     results[i] = getRandomInt(diceCommand[1]);
   }
+
+  // NOTE: ↑はこうすると1行で書ける
+  // const results = Array(diceCommand[0]).map(_ => getRandomInt(diceCommand[1]))
+
   let ans: string = `(${diceData}) → `;
   const total = arraySum(results);
   if (diceCommand[0] === 1) ans += String(total);
@@ -70,29 +122,38 @@ function dice(diceData: string) {
   }
   return ans;
 }
-client.on("messageCreate", async (message: Message) => {
-  if (message.author.bot) return;
-  let messageData;
+
+function diceBuild(message: String) {
+  let messageData: RegExpMatchArray | null;
 
   // dice
-  messageData = message.content.match(
-    /^[1-9][0-9]*[dD][1-9][0-9]*(<=?[1-9][0-9]*)?/
-  );
+  messageData = message.match(/^[1-9][0-9]*[dD][1-9][0-9]*(<=?[1-9][0-9]*)?/);
   if (messageData) {
-    await message.channel.send(dice(messageData[0]));
+    return messageData[0];
   }
-  messageData = message.content.match(/^res\(([1-9][0-9]*)-([1-9][0-9]*)\)/);
+
+  // res
+  messageData = message.match(/^res\(([1-9][0-9]*)-([1-9][0-9]*)\)/);
   if (messageData) {
     const me = Number(messageData[1]);
     const you = Number(messageData[2]);
     const threshold = 50 + (me - you) * 5;
-    await message.channel.send(dice(`1d100<=${threshold}`));
+    return `1d100<=${threshold}`;
   }
-  messageData = message.content.match(/^cbr\(([1-9][0-9]*),([1-9][0-9]*)\)/);
+  messageData = message.match(/^cbr\(([1-9][0-9]*),([1-9][0-9]*)\)/);
   if (messageData) {
     const one = Number(messageData[1]);
     const two = Number(messageData[2]);
-    await message.channel.send(dice(`1d100<=${one},${two}`));
+    return `1d100<=${one},${two}`;
   }
+  return "";
+}
+client.on("messageCreate", async (message: Message) => {
+  const diceData = diceBuild(message.content);
+  if (diceData) await message.channel.send(diceExec(diceData));
 });
-client.login(process.env.TOKEN);
+try {
+  client.login(token);
+} catch (e) {
+  console.log(e);
+}
