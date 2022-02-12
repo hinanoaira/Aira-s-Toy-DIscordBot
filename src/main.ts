@@ -74,7 +74,7 @@ client.on("interactionCreate", async (interaction) => {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
-    if(!diceData){
+    if (!diceData) {
       await interaction.reply("こまんどがへんです。。。");
       return;
     }
@@ -86,7 +86,7 @@ client.on("interactionCreate", async (interaction) => {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
-    if(!diceData){
+    if (!diceData) {
       await interaction.reply("こまんどがへんです。。。");
       return;
     }
