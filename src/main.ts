@@ -161,10 +161,10 @@ try {
 }
 
 const app: express.Express = express();
-const port = process.env.PORT || 3000
-app.get("/*", (_, res:express.Response)=>{
+const port = process.env.PORT || 3000;
+app.get("/*", (_, res: express.Response) => {
   res.send("Hello,World!");
-})
-app.listen(port,()=>{
-  console.log(`Listening: http://localhost:${port}`)
-})
+});
+app.listen(port, () => {
+  console.log(`Listening: http://localhost:${port}`);
+});
