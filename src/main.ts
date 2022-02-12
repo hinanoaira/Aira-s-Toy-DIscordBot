@@ -1,5 +1,6 @@
 import { Message, Client, ApplicationCommandDataResolvable } from "discord.js";
 import { from } from "linq-to-typescript";
+import express from "express";
 
 const token = process.env.TOKEN;
 if (token === undefined) throw Error("token invalid");
@@ -148,6 +149,7 @@ function diceBuild(message: String) {
   }
   return "";
 }
+
 client.on("messageCreate", async (message: Message) => {
   const diceData = diceBuild(message.content);
   if (diceData) await message.channel.send(diceExec(diceData));
@@ -157,3 +159,12 @@ try {
 } catch (e) {
   console.log(e);
 }
+
+const app: express.Express = express();
+const port = process.env.PORT || 3000;
+app.get("/*", (_, res: express.Response) => {
+  res.send("Hello,World!");
+});
+app.listen(port, () => {
+  console.log(`Listening: http://localhost:${port}`);
+});

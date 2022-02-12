@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/express": "^4.17.13",
     "@typescript-eslint/eslint-plugin": "^5.11.0",
     "@typescript-eslint/parser": "^5.11.0",
     "eslint": "^7.32.0",
@@ -26,6 +27,7 @@
   },
   "dependencies": {
     "discord.js": "^13.6.0",
+    "express": "^4.17.2",
     "linq-to-typescript": "^9.0.0"
   }
 }
