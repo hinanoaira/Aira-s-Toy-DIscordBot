@@ -17,8 +17,20 @@ client.once("ready", async () => {
       description: "Replies with Pong!",
     },
     {
+      name: "dice",
+      description: "ダイスロールを行います",
+      options: [
+        {
+          type: "STRING",
+          name: "dice",
+          description: "ダイスコマンド",
+          required: true,
+        },
+      ],
+    },
+    {
       name: "secretdice",
-      description: "やばいお",
+      description: "他の人に見えない形でダイスロールを行います",
       options: [
         {
           type: "STRING",
@@ -45,13 +57,23 @@ client.on("interactionCreate", async (interaction) => {
     await interaction.reply("pong!");
     return;
   }
+  if (interaction.commandName === "dice") {
+    const arg = interaction.options.data[0].value;
+    if (typeof arg !== "string") return;
+    const diceData = diceBuild(arg);
+    const ans = diceExec(diceData);
+    await interaction.reply({ content: ans });
+    return;
+  }
   if (interaction.commandName === "secretdice") {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
     const ans = diceExec(diceData);
+    await interaction.channel?.send(
+      `${interaction.user.username} > シークレットダイス`
+    );
     await interaction.reply({ content: ans, ephemeral: true });
-    await interaction.reply("シークレットダイス");
   }
 });
 
@@ -152,7 +174,7 @@ function diceBuild(message: String) {
 
 client.on("messageCreate", async (message: Message) => {
   const diceData = diceBuild(message.content);
-  if (diceData) await message.channel.send(diceExec(diceData));
+  if (diceData !== "") await message.reply(diceExec(diceData));
 });
 try {
   client.login(token);
