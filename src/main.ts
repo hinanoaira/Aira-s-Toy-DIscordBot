@@ -9,40 +9,45 @@ const client = new Client({
   intents: ["GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES"],
 });
 
+const commandData: ApplicationCommandDataResolvable[] = [
+  {
+    name: "ping",
+    description: "pong!",
+  },
+  {
+    name: "dice",
+    description: "ダイスロールを行います",
+    options: [
+      {
+        type: "STRING",
+        name: "dice",
+        description: "ダイスコマンド",
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "secretdice",
+    description: "他の人に見えない形でダイスロールを行います",
+    options: [
+      {
+        type: "STRING",
+        name: "dice",
+        description: "ダイスコマンド",
+        required: true,
+      },
+    ],
+  },
+  {
+    name: "commandrefresh",
+    description: "コマンド一覧を更新します",
+  },
+];
+
 client.once("ready", async () => {
   console.log(client.user?.tag);
-  const data: ApplicationCommandDataResolvable[] = [
-    {
-      name: "ping",
-      description: "Replies with Pong!",
-    },
-    {
-      name: "dice",
-      description: "ダイスロールを行います",
-      options: [
-        {
-          type: "STRING",
-          name: "dice",
-          description: "ダイスコマンド",
-          required: true,
-        },
-      ],
-    },
-    {
-      name: "secretdice",
-      description: "他の人に見えない形でダイスロールを行います",
-      options: [
-        {
-          type: "STRING",
-          name: "dice",
-          description: "ダイスコマンド",
-          required: true,
-        },
-      ],
-    },
-  ];
   try {
-    await client.application?.commands.set(data, "793096144678682634");
+    await client.application?.commands.set(commandData);
   } catch (e) {
     console.log(e);
   }
@@ -56,6 +61,14 @@ client.on("interactionCreate", async (interaction) => {
   if (interaction.commandName === "ping") {
     await interaction.reply("pong!");
     return;
+  }
+  if (interaction.commandName === "commandrefresh") {
+    if (interaction.guildId !== null) {
+      await client.application?.commands.set(commandData, interaction.guildId);
+      await interaction.reply("更新しました");
+      return;
+    }
+    await interaction.reply("更新できませんでした。");
   }
   if (interaction.commandName === "dice") {
     const arg = interaction.options.data[0].value;
@@ -174,7 +187,18 @@ function diceBuild(message: String) {
 
 client.on("messageCreate", async (message: Message) => {
   const diceData = diceBuild(message.content);
-  if (diceData !== "") await message.reply(diceExec(diceData));
+  if (diceData !== "") {
+    await message.reply(diceExec(diceData));
+    return;
+  }
+  if (message.content === "!airaCommandRefresh") {
+    if (message.guildId !== null) {
+      await client.application?.commands.set(commandData, message.guildId);
+      await message.reply("更新しました");
+      return;
+    }
+    await message.reply("更新できませんでした");
+  }
 });
 try {
   client.login(token);
