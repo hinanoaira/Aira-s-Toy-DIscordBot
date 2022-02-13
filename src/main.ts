@@ -181,7 +181,7 @@ function thresholdCheck(num: Number, threshold: Number, lessThan: Boolean) {
 }
 function diceExec(diceData: string) {
   if (diceData.match(/D/)) diceData = diceData.replace("D", "d");
-  const diceCommand = String(diceData.match(/^[1-9][0-9]*[D][1-9][0-9]*/))
+  const diceCommand = String(diceData.match(/^[1-9][0-9]*[d][1-9][0-9]*/))
     .split("d")
     .map((item) => Number(item));
 
