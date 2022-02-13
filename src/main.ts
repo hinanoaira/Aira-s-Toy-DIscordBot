@@ -8,6 +8,9 @@ const client = new Client({
   intents: ["GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES"],
 });
 
+
+const emptyData: ApplicationCommandDataResolvable[] = [];
+
 const commandData: ApplicationCommandDataResolvable[] = [
   {
     name: "ping",
@@ -46,7 +49,7 @@ const commandData: ApplicationCommandDataResolvable[] = [
 client.once("ready", async () => {
   console.log(client.user?.tag);
   try {
-    await client.application?.commands.set(commandData);
+    await client.application?.commands.set(emptyData);
   } catch (e) {
     console.log(e);
   }
@@ -191,10 +194,18 @@ client.on("messageCreate", async (message: Message) => {
     await message.reply(diceExec(diceData));
     return;
   }
-  if (message.content === "!airaCommandRefresh") {
+  if (message.content === "!airaCommandRegist") {
     if (message.guildId !== null) {
       await client.application?.commands.set(commandData, message.guildId);
-      await message.reply("更新しました");
+      await message.reply("コマンドを更新しました");
+      return;
+    }
+    await message.reply("更新できませんでした");
+  }
+  if (message.content === "!airaCommandDelete") {
+    if (message.guildId !== null) {
+      await client.application?.commands.set(emptyData, message.guildId);
+      await message.reply("コマンドを削除しました");
       return;
     }
     await message.reply("更新できませんでした");
