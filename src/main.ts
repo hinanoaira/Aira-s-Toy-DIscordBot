@@ -8,7 +8,6 @@ const client = new Client({
   intents: ["GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES"],
 });
 
-
 const emptyData: ApplicationCommandDataResolvable[] = [];
 
 const commandData: ApplicationCommandDataResolvable[] = [
@@ -124,7 +123,7 @@ function diceExec(diceData: string) {
     .split("D")
     .map((item) => Number(item));
 
-  const results = Array(diceCommand[0]).map((_) =>
+  const results = [...Array(diceCommand[0])].map((_) =>
     getRandomInt(diceCommand[1])
   );
 
@@ -164,13 +163,15 @@ function diceBuild(message: String) {
   let messageData: RegExpMatchArray | null;
 
   // dice
-  messageData = message.match(/^[1-9][0-9]*[dD][1-9][0-9]*(<=?[1-9][0-9]*)?/);
+  messageData = message.match(
+    /^(100|[1-9][0-9]?)[dD](100|[1-9][0-9]?)(<=?(100|[1-9][0-9]?))?/
+  );
   if (messageData) {
     return messageData[0];
   }
 
   // res
-  messageData = message.match(/^res\(([1-9][0-9]*)-([1-9][0-9]*)\)/);
+  messageData = message.match(/^res\((100|[1-9][0-9]?)-(100|[1-9][0-9]?)\)/);
   if (messageData) {
     const me = Number(messageData[1]);
     const you = Number(messageData[2]);
@@ -179,7 +180,7 @@ function diceBuild(message: String) {
   }
 
   // cbr
-  messageData = message.match(/^cbr\(([1-9][0-9]*),([1-9][0-9]*)\)/);
+  messageData = message.match(/^cbr\((100|[1-9][0-9]?),(100|[1-9][0-9]?)\)/);
   if (messageData) {
     const one = Number(messageData[1]);
     const two = Number(messageData[2]);
