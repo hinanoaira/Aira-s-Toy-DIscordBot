@@ -41,11 +41,11 @@ const commandData: ApplicationCommandDataResolvable[] = [
   },
   {
     name: "fortune",
-    description: "ダイスを2度振って今日の運勢を占います",
+    description: "1d100を2度振って今日の運勢を占います",
   },
   {
     name: "cfortune",
-    description: "CoCの幸運値(3d6*5)で今日の運勢を占います",
+    description: "幸運値(3d6*5)で今日の運勢を占います",
   },
   {
     name: "commandrefresh",
@@ -110,8 +110,8 @@ client.on("interactionCreate", async (interaction) => {
     const firstDice = getRandomInt(100);
     const secondDice = getRandomInt(100);
     let ans =
-      `ダイス1投目 → (1D100) → ${firstDice}\n` +
-      `ダイス2投目 → (1D100<=${firstDice}) → ${secondDice} →`;
+      `ダイス1投目 → (1d100) → ${firstDice}\n` +
+      `ダイス2投目 → (1d100<=${firstDice}) → ${secondDice} →`;
     if (secondDice <= firstDice) {
       if (secondDice <= 5) {
         ans += "大吉";
@@ -142,7 +142,7 @@ client.on("interactionCreate", async (interaction) => {
     const secondDice = getRandomInt(100);
     const success = secondDice <= fortune;
     const ans =
-      `ダイス1投目 → (3D6) → ${firstDiceSumed}[${firstDice.join(
+      `ダイス1投目 → (3d6) → ${firstDiceSumed}[${firstDice.join(
         ","
       )}] → ${firstDiceSumed}(幸運:${fortune})\n` +
       `ダイス2投目 → (1d100<=${fortune}) → ${secondDice} → ${
@@ -180,9 +180,9 @@ function thresholdCheck(num: Number, threshold: Number, lessThan: Boolean) {
   }
 }
 function diceExec(diceData: string) {
-  if (diceData.match(/d/)) diceData = diceData.replace("d", "D");
+  if (diceData.match(/D/)) diceData = diceData.replace("D", "d");
   const diceCommand = String(diceData.match(/^[1-9][0-9]*[D][1-9][0-9]*/))
-    .split("D")
+    .split("d")
     .map((item) => Number(item));
 
   const results = [...Array(diceCommand[0])].map((_) =>
