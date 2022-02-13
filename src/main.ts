@@ -104,12 +104,28 @@ client.on("interactionCreate", async (interaction) => {
   if (interaction.commandName === "fortune") {
     const firstDice = getRandomInt(100);
     const secondDice = getRandomInt(100);
-    const ans =
+    let ans =
       `ダイス1投目 → (1D100) → ${firstDice}\n` +
-      `ダイス2投目 → (1D100<=${firstDice}) → ${secondDice} → ${
-        secondDice <= firstDice ? "成功" : "失敗"
-      }\n` +
-      `${secondDice <= firstDice ? "吉" : "凶"}`;
+      `ダイス2投目 → (1D100<=${firstDice}) → ${secondDice} →`;
+    if (secondDice <= firstDice) {
+      if (secondDice <= 5) {
+        ans += "大吉";
+      } else if (firstDice <= 25) {
+        ans += "中吉";
+      } else if (firstDice <= 50) {
+        ans += "小吉";
+      } else {
+        ans += "吉";
+      }
+    } else{
+      if (secondDice >= 96){
+        ans += "大凶";
+      } else if(firstDice <= 50) {
+        ans += "末吉"
+      } else {
+        ans += "凶"
+      }
+    }
 
     await interaction.reply(ans);
   }
