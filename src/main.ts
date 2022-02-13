@@ -117,13 +117,13 @@ client.on("interactionCreate", async (interaction) => {
       } else {
         ans += "吉";
       }
-    } else{
-      if (secondDice >= 96){
+    } else {
+      if (secondDice >= 96) {
         ans += "大凶";
-      } else if(firstDice <= 50) {
-        ans += "末吉"
+      } else if (firstDice <= 50) {
+        ans += "末吉";
       } else {
-        ans += "凶"
+        ans += "凶";
       }
     }
 
