@@ -44,6 +44,10 @@ const commandData: ApplicationCommandDataResolvable[] = [
     description: "ダイスを2度振って今日の運勢を占います",
   },
   {
+    name: "cfortune",
+    description: "CoCの幸運値(3d6*5)で今日の運勢を占います",
+  },
+  {
     name: "commandrefresh",
     description: "コマンド一覧を更新します",
   },
@@ -100,6 +104,7 @@ client.on("interactionCreate", async (interaction) => {
       `${interaction.user.username} > シークレットダイス`
     );
     await interaction.reply({ content: ans, ephemeral: true });
+    return;
   }
   if (interaction.commandName === "fortune") {
     const firstDice = getRandomInt(100);
@@ -127,6 +132,31 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
+    await interaction.reply(ans);
+    return;
+  }
+  if (interaction.commandName === "cfortune") {
+    const firstDice = [...Array(3)].map((_) => getRandomInt(6));
+    const firstDiceSumed = arraySum(firstDice);
+    const fortune = firstDiceSumed * 5;
+    const secondDice = getRandomInt(100);
+    const success = secondDice <= fortune;
+    const ans =
+      `ダイス1投目 → (3D6) → ${firstDiceSumed}[${firstDice.join(
+        ","
+      )}] → ${firstDiceSumed}(幸運:${fortune})\n` +
+      `ダイス2投目 → (1d100<=${fortune}) → ${secondDice} → ${
+        success
+          ? secondDice <= 5
+            ? "決定的成功"
+            : "成功"
+          : secondDice >= 96
+          ? "致命的失敗"
+          : "失敗"
+      }\n\n` +
+      (success
+        ? "貴方の今日という一日に幸あれ"
+        : "この結果に負けず幸せを自分で掴み取っていきましょう");
     await interaction.reply(ans);
   }
 });
