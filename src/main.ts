@@ -8,6 +8,8 @@ const client = new Client({
   intents: ["GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES"],
 });
 
+const emptyData: ApplicationCommandDataResolvable[] = [];
+
 const commandData: ApplicationCommandDataResolvable[] = [
   {
     name: "ping",
@@ -38,6 +40,10 @@ const commandData: ApplicationCommandDataResolvable[] = [
     ],
   },
   {
+    name: "fortune",
+    description: "ダイスを2度振って今日の運勢を占います",
+  },
+  {
     name: "commandrefresh",
     description: "コマンド一覧を更新します",
   },
@@ -46,7 +52,7 @@ const commandData: ApplicationCommandDataResolvable[] = [
 client.once("ready", async () => {
   console.log(client.user?.tag);
   try {
-    await client.application?.commands.set(commandData);
+    await client.application?.commands.set(emptyData);
   } catch (e) {
     console.log(e);
   }
@@ -95,6 +101,18 @@ client.on("interactionCreate", async (interaction) => {
     );
     await interaction.reply({ content: ans, ephemeral: true });
   }
+  if (interaction.commandName === "fortune") {
+    const firstDice = getRandomInt(100);
+    const secondDice = getRandomInt(100);
+    const ans =
+      `ダイス1投目 → (1D100) → ${firstDice}\n` +
+      `ダイス2投目 → (1D100<=${firstDice}) → ${secondDice} → ${
+        secondDice <= firstDice ? "成功" : "失敗"
+      }\n` +
+      `${secondDice <= firstDice ? "吉" : "凶"}`;
+
+    await interaction.reply(ans);
+  }
 });
 
 function getRandomInt(max: number) {
@@ -121,7 +139,7 @@ function diceExec(diceData: string) {
     .split("D")
     .map((item) => Number(item));
 
-  const results = Array(diceCommand[0]).map((_) =>
+  const results = [...Array(diceCommand[0])].map((_) =>
     getRandomInt(diceCommand[1])
   );
 
@@ -161,13 +179,15 @@ function diceBuild(message: String) {
   let messageData: RegExpMatchArray | null;
 
   // dice
-  messageData = message.match(/^[1-9][0-9]*[dD][1-9][0-9]*(<=?[1-9][0-9]*)?/);
+  messageData = message.match(
+    /^(100|[1-9][0-9]?)[dD](100|[1-9][0-9]?)(<=?(100|[1-9][0-9]?))?/
+  );
   if (messageData) {
     return messageData[0];
   }
 
   // res
-  messageData = message.match(/^res\(([1-9][0-9]*)-([1-9][0-9]*)\)/);
+  messageData = message.match(/^res\((100|[1-9][0-9]?)-(100|[1-9][0-9]?)\)/);
   if (messageData) {
     const me = Number(messageData[1]);
     const you = Number(messageData[2]);
@@ -176,7 +196,7 @@ function diceBuild(message: String) {
   }
 
   // cbr
-  messageData = message.match(/^cbr\(([1-9][0-9]*),([1-9][0-9]*)\)/);
+  messageData = message.match(/^cbr\((100|[1-9][0-9]?),(100|[1-9][0-9]?)\)/);
   if (messageData) {
     const one = Number(messageData[1]);
     const two = Number(messageData[2]);
@@ -191,10 +211,18 @@ client.on("messageCreate", async (message: Message) => {
     await message.reply(diceExec(diceData));
     return;
   }
-  if (message.content === "!airaCommandRefresh") {
+  if (message.content === "!airaCommandRegist") {
     if (message.guildId !== null) {
       await client.application?.commands.set(commandData, message.guildId);
-      await message.reply("更新しました");
+      await message.reply("コマンドを更新しました");
+      return;
+    }
+    await message.reply("更新できませんでした");
+  }
+  if (message.content === "!airaCommandDelete") {
+    if (message.guildId !== null) {
+      await client.application?.commands.set(emptyData, message.guildId);
+      await message.reply("コマンドを削除しました");
       return;
     }
     await message.reply("更新できませんでした");
