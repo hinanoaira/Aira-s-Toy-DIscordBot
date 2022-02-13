@@ -40,6 +40,10 @@ const commandData: ApplicationCommandDataResolvable[] = [
     ],
   },
   {
+    name: "fortune",
+    description: "ダイスを2度振って今日の運勢を占います",
+  },
+  {
     name: "commandrefresh",
     description: "コマンド一覧を更新します",
   },
@@ -96,6 +100,18 @@ client.on("interactionCreate", async (interaction) => {
       `${interaction.user.username} > シークレットダイス`
     );
     await interaction.reply({ content: ans, ephemeral: true });
+  }
+  if (interaction.commandName === "fortune") {
+    const firstDice = getRandomInt(100);
+    const secondDice = getRandomInt(100);
+    const ans =
+      `ダイス1投目 → (1D100) → ${firstDice}\n` +
+      `ダイス2投目 → (1D100<=${firstDice}) → ${secondDice} → ${
+        secondDice <= firstDice ? "成功" : "失敗"
+      }\n` +
+      `${secondDice <= firstDice ? "吉" : "凶"}`;
+
+    await interaction.reply(ans);
   }
 });
 
