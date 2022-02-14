@@ -49,6 +49,30 @@ const commandData: ApplicationCommandDataResolvable[] = [
     name: "commandrefresh",
     description: "コマンド一覧を更新します",
   },
+  {
+    name: "senka",
+    description: "古戦場の箱目標から戦貨がいくつ必要かを計算します",
+    options: [
+      {
+        type: "INTEGER",
+        name: "nowbox",
+        description: "今何箱目か",
+        required: true,
+      },
+      {
+        type: "INTEGER",
+        name: "targetbox",
+        description: "目標",
+        required: true,
+      },
+      {
+        type: "INTEGER",
+        name: "balance",
+        description: "現在の所持戦貨",
+        required: true,
+      },
+    ],
+  },
 ];
 
 client.once("ready", async () => {
@@ -149,6 +173,43 @@ client.on("interactionCreate", async (interaction) => {
         ? "貴方の今日という一日に幸あれ"
         : "この結果に負けず幸せを自分で掴み取っていきましょう");
     await interaction.reply(ans);
+  } else if (interaction.commandName === "senka") {
+    const nowBox = Number(interaction.options.data[0].value); // 現在の箱
+    const targetBox = Number(interaction.options.data[1].value); // 目標
+    const balance = Number(interaction.options.data[2].value); // 所持戦貨
+
+    let requiredSenka = 0; // 必要な戦貨
+
+    for (let i = nowBox; i <= targetBox; i++) {
+      requiredSenka += getRequiredSenkaByBox(i);
+    }
+
+    let ans =
+      `現在**${nowBox}**箱まで開けていて、現在戦貨を**${balance}**枚持っています。\n` +
+      `**${targetBox}**箱まで開けるために必要な戦貨は**${requiredSenka}**枚です。\n`;
+    if (balance < requiredSenka) {
+      ans += `残りの必要戦貨は**${requiredSenka - balance}**枚です。`;
+    } else {
+      let tmpBox = targetBox;
+      let tmpBalance = balance - requiredSenka;
+      while (true) {
+        tmpBox++;
+        tmpBalance -= getRequiredSenkaByBox(tmpBox);
+        if (tmpBalance < 0) {
+          tmpBalance += getRequiredSenkaByBox(tmpBox);
+          tmpBox--;
+          break;
+        }
+      }
+      if (tmpBox - targetBox === 0) {
+        ans += `今**${balance - requiredSenka}**枚余剰に持っています。`;
+      } else {
+        ans += `今**${balance - requiredSenka}**枚余剰に持っていて、あと**${
+          tmpBox - targetBox
+        }**箱開けられます。`;
+      }
+    }
+    interaction.reply(ans);
   }
 });
 
@@ -268,6 +329,13 @@ function diceExec(diceData: string) {
   }
 
   return ans;
+}
+
+function getRequiredSenkaByBox(boxNo: Number) {
+  if (boxNo <= 4) return 2200;
+  if (boxNo <= 45) return 2000;
+  if (boxNo <= 80) return 10000;
+  return 15000;
 }
 
 try {
