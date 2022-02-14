@@ -1,4 +1,5 @@
 import { Message, Client, ApplicationCommandDataResolvable } from "discord.js";
+import { fortuneComments } from "./fortuneComments";
 import express from "express";
 const token = process.env.TOKEN;
 if (token === undefined) throw Error("token invalid");
@@ -123,6 +124,7 @@ client.on("interactionCreate", async (interaction) => {
         ans += "凶";
       }
     }
+    ans += `\n\n${fortuneComments.getComment()}`;
     await interaction.reply(ans);
   } else if (interaction.commandName === "cfortune") {
     const firstDice = [...Array(3)].map((_) => getRandomInt(6));
