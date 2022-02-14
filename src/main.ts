@@ -1,15 +1,12 @@
 import { Message, Client, ApplicationCommandDataResolvable } from "discord.js";
 import express from "express";
-
 const token = process.env.TOKEN;
 if (token === undefined) throw Error("token invalid");
 
 const client = new Client({
   intents: ["GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES"],
 });
-
 const emptyData: ApplicationCommandDataResolvable[] = [];
-
 const commandData: ApplicationCommandDataResolvable[] = [
   {
     name: "ping",
@@ -67,19 +64,18 @@ client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) {
     return;
   }
+
+  // ping
   if (interaction.commandName === "ping") {
     await interaction.reply("pong!");
-    return;
-  }
-  if (interaction.commandName === "commandrefresh") {
+  } else if (interaction.commandName === "commandrefresh") {
     if (interaction.guildId !== null) {
       await client.application?.commands.set(commandData, interaction.guildId);
       await interaction.reply("更新しました");
       return;
     }
     await interaction.reply("更新できませんでした。");
-  }
-  if (interaction.commandName === "dice") {
+  } else if (interaction.commandName === "dice") {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
@@ -89,9 +85,7 @@ client.on("interactionCreate", async (interaction) => {
     }
     const ans = diceExec(diceData);
     await interaction.reply({ content: ans });
-    return;
-  }
-  if (interaction.commandName === "secretdice") {
+  } else if (interaction.commandName === "secretdice") {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
@@ -104,9 +98,7 @@ client.on("interactionCreate", async (interaction) => {
       `${interaction.user.username} > シークレットダイス`
     );
     await interaction.reply({ content: ans, ephemeral: true });
-    return;
-  }
-  if (interaction.commandName === "fortune") {
+  } else if (interaction.commandName === "fortune") {
     const firstDice = getRandomInt(100);
     const secondDice = getRandomInt(100);
     let ans =
@@ -131,11 +123,8 @@ client.on("interactionCreate", async (interaction) => {
         ans += "凶";
       }
     }
-
     await interaction.reply(ans);
-    return;
-  }
-  if (interaction.commandName === "cfortune") {
+  } else if (interaction.commandName === "cfortune") {
     const firstDice = [...Array(3)].map((_) => getRandomInt(6));
     const firstDiceSumed = arraySum(firstDice);
     const fortune = firstDiceSumed * 5;
@@ -161,6 +150,27 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
+client.on("messageCreate", async (message: Message) => {
+  const diceData = diceBuild(message.content);
+  if (diceData) {
+    await message.reply(diceExec(diceData));
+  } else if (message.content === "!airaCommandRegist") {
+    if (message.guildId !== null) {
+      await client.application?.commands.set(commandData, message.guildId);
+      await message.reply("コマンドを更新しました");
+      return;
+    }
+    await message.reply("更新できませんでした");
+  } else if (message.content === "!airaCommandDelete") {
+    if (message.guildId !== null) {
+      await client.application?.commands.set(emptyData, message.guildId);
+      await message.reply("コマンドを削除しました");
+      return;
+    }
+    await message.reply("更新できませんでした");
+  }
+});
+
 function getRandomInt(max: number) {
   return Math.ceil(Math.random() * max);
 }
@@ -172,53 +182,13 @@ function arraySum(data: Array<number>) {
   }
   return ans;
 }
+
 function thresholdCheck(num: Number, threshold: Number, lessThan: Boolean) {
   if (lessThan) {
     return num < threshold;
   } else {
     return num <= threshold;
   }
-}
-function diceExec(diceData: string) {
-  if (diceData.match(/D/)) diceData = diceData.replace("D", "d");
-  const diceCommand = String(diceData.match(/^[1-9][0-9]*[d][1-9][0-9]*/))
-    .split("d")
-    .map((item) => Number(item));
-
-  const results = [...Array(diceCommand[0])].map((_) =>
-    getRandomInt(diceCommand[1])
-  );
-
-  let ans = `(${diceData}) → `;
-  const total = arraySum(results);
-  if (diceCommand[0] === 1) ans += String(total);
-  else ans += `${total}[${results.join(",")}] → ${total}`;
-  const thresholdData = diceData.match(/<=?([1-9][0-9]*)(,([1-9][0-9]*))?$/);
-  const lessThan = !diceData.includes("<=");
-  if (thresholdData) {
-    const dicen = diceCommand.join("d");
-    if (thresholdData[3] !== undefined) {
-      const data1 = thresholdCheck(total, Number(thresholdData[1]), lessThan);
-      const data2 = thresholdCheck(total, Number(thresholdData[3]), lessThan);
-      ans += `[${data1 ? "成功" : "失敗"},${data2 ? "成功" : "失敗"}] → `;
-      if (data1 && data2)
-        ans += dicen === "1d100" && total <= 5 ? "決定的成功" : "成功";
-      else if (data1 !== data2) ans += "部分的成功";
-      else ans += dicen === "1d100" && total >= 95 ? "致命的失敗" : "失敗";
-    } else {
-      const data1 = thresholdCheck(total, Number(thresholdData[1]), lessThan);
-      ans += ` → ${
-        data1
-          ? dicen === "1d100" && total <= 5
-            ? "決定的成功"
-            : "成功"
-          : dicen === "1d100" && total >= 96
-          ? "致命的失敗"
-          : "失敗"
-      }`;
-    }
-  }
-  return ans;
 }
 
 function diceBuild(message: String) {
@@ -251,29 +221,53 @@ function diceBuild(message: String) {
   return null;
 }
 
-client.on("messageCreate", async (message: Message) => {
-  const diceData = diceBuild(message.content);
-  if (diceData) {
-    await message.reply(diceExec(diceData));
-    return;
-  }
-  if (message.content === "!airaCommandRegist") {
-    if (message.guildId !== null) {
-      await client.application?.commands.set(commandData, message.guildId);
-      await message.reply("コマンドを更新しました");
-      return;
+function diceExec(diceData: string) {
+  if (diceData.match(/D/)) diceData = diceData.replace("D", "d");
+
+  // ダイス実行
+  const diceCommand = String(diceData.match(/^[1-9][0-9]*[d][1-9][0-9]*/))
+    .split("d")
+    .map((item) => Number(item));
+  const results = [...Array(diceCommand[0])].map((_) =>
+    getRandomInt(diceCommand[1])
+  );
+  const total = arraySum(results);
+
+  let ans = `(${diceData}) → `;
+  if (diceCommand[0] === 1) ans += String(total);
+  else ans += `${total}[${results.join(",")}] → ${total}`;
+
+  // 成否判定
+  const thresholdData = diceData.match(/<=?([1-9][0-9]*)(,([1-9][0-9]*))?$/);
+  const lessThan = !diceData.includes("<=");
+
+  if (thresholdData) {
+    const dicen = diceCommand.join("d");
+    if (thresholdData[3] !== undefined) {
+      const data1 = thresholdCheck(total, Number(thresholdData[1]), lessThan);
+      const data2 = thresholdCheck(total, Number(thresholdData[3]), lessThan);
+      ans += `[${data1 ? "成功" : "失敗"},${data2 ? "成功" : "失敗"}] → `;
+      if (data1 && data2)
+        ans += dicen === "1d100" && total <= 5 ? "決定的成功" : "成功";
+      else if (data1 !== data2) ans += "部分的成功";
+      else ans += dicen === "1d100" && total >= 95 ? "致命的失敗" : "失敗";
+    } else {
+      const data1 = thresholdCheck(total, Number(thresholdData[1]), lessThan);
+      ans += ` → ${
+        data1
+          ? dicen === "1d100" && total <= 5
+            ? "決定的成功"
+            : "成功"
+          : dicen === "1d100" && total >= 96
+          ? "致命的失敗"
+          : "失敗"
+      }`;
     }
-    await message.reply("更新できませんでした");
   }
-  if (message.content === "!airaCommandDelete") {
-    if (message.guildId !== null) {
-      await client.application?.commands.set(emptyData, message.guildId);
-      await message.reply("コマンドを削除しました");
-      return;
-    }
-    await message.reply("更新できませんでした");
-  }
-});
+
+  return ans;
+}
+
 try {
   client.login(token);
 } catch (e) {
