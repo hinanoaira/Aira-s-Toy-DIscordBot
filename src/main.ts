@@ -65,9 +65,9 @@ client.on("interactionCreate", async (interaction) => {
     return;
   }
 
+  // ping
   if (interaction.commandName === "ping") {
     await interaction.reply("pong!");
-
   } else if (interaction.commandName === "commandrefresh") {
     if (interaction.guildId !== null) {
       await client.application?.commands.set(commandData, interaction.guildId);
@@ -75,7 +75,6 @@ client.on("interactionCreate", async (interaction) => {
       return;
     }
     await interaction.reply("更新できませんでした。");
-
   } else if (interaction.commandName === "dice") {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
@@ -86,7 +85,6 @@ client.on("interactionCreate", async (interaction) => {
     }
     const ans = diceExec(diceData);
     await interaction.reply({ content: ans });
-
   } else if (interaction.commandName === "secretdice") {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
@@ -100,7 +98,6 @@ client.on("interactionCreate", async (interaction) => {
       `${interaction.user.username} > シークレットダイス`
     );
     await interaction.reply({ content: ans, ephemeral: true });
-
   } else if (interaction.commandName === "fortune") {
     const firstDice = getRandomInt(100);
     const secondDice = getRandomInt(100);
@@ -127,7 +124,6 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
     await interaction.reply(ans);
-
   } else if (interaction.commandName === "cfortune") {
     const firstDice = [...Array(3)].map((_) => getRandomInt(6));
     const firstDiceSumed = arraySum(firstDice);
@@ -165,7 +161,6 @@ client.on("messageCreate", async (message: Message) => {
       return;
     }
     await message.reply("更新できませんでした");
-
   } else if (message.content === "!airaCommandDelete") {
     if (message.guildId !== null) {
       await client.application?.commands.set(emptyData, message.guildId);
@@ -245,7 +240,7 @@ function diceExec(diceData: string) {
   // 成否判定
   const thresholdData = diceData.match(/<=?([1-9][0-9]*)(,([1-9][0-9]*))?$/);
   const lessThan = !diceData.includes("<=");
-  
+
   if (thresholdData) {
     const dicen = diceCommand.join("d");
     if (thresholdData[3] !== undefined) {
