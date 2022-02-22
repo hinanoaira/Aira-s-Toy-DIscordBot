@@ -209,13 +209,21 @@ client.on("interactionCreate", async (interaction) => {
           value: fortuneComments.getComment(),
         }
       );
+    let username = await (
+      await interaction.guild?.members.fetch({ user: [interaction.user.id] })
+    )?.first()?.nickname;
+    if (!username) {
+      username = interaction.user.username;
+    }
     const avatarURL = interaction.user.avatarURL();
     if (avatarURL)
       embed.setAuthor({
-        name: interaction.user.username,
+        name: username,
         iconURL: avatarURL,
       });
-    else embed.setAuthor({ name: interaction.user.username });
+    else {
+      embed.setAuthor({ name: username });
+    }
 
     if (interaction.isButton()) {
       interaction.update({ components: [] });
@@ -264,12 +272,21 @@ client.on("interactionCreate", async (interaction) => {
             : "この結果に負けず幸せを自分で掴み取っていきましょう",
         }
       );
+    let username = await (
+      await interaction.guild?.members.fetch({ user: [interaction.user.id] })
+    )?.first()?.nickname;
+    if (!username) {
+      username = interaction.user.username;
+    }
     const avatarURL = interaction.user.avatarURL();
     if (avatarURL)
       embed.setAuthor({
-        name: interaction.user.username,
+        name: username,
         iconURL: avatarURL,
       });
+    else {
+      embed.setAuthor({ name: username });
+    }
 
     if (interaction.isButton()) {
       interaction.update({ components: [] });
