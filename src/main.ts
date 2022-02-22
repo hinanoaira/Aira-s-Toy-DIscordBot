@@ -183,29 +183,32 @@ client.on("interactionCreate", async (interaction) => {
         ans = "凶";
       }
     }
-    const embed = new MessageEmbed().setColor(colors[ans]).addFields(
-      { name: "ダイス1投目", value: `(1d100) → ${firstDice}\n` },
-      {
-        name: "ダイス2投目",
-        value: `(1d100<=${firstDice}) → ${secondDice} → ${
-          success
-            ? secondDice <= 5
-              ? "決定的成功"
-              : "成功"
-            : secondDice >= 96
-            ? "致命的失敗"
-            : "失敗"
-        }`,
-      },
-      {
-        name: "結果",
-        value: ans,
-      },
-      {
-        name: "今日のひとこと",
-        value: fortuneComments.getComment(),
-      }
-    );
+    const embed = new MessageEmbed()
+      .setTimestamp()
+      .setColor(colors[ans])
+      .addFields(
+        { name: "ダイス1投目", value: `(1d100) → ${firstDice}\n` },
+        {
+          name: "ダイス2投目",
+          value: `(1d100<=${firstDice}) → ${secondDice} → ${
+            success
+              ? secondDice <= 5
+                ? "決定的成功"
+                : "成功"
+              : secondDice >= 96
+              ? "致命的失敗"
+              : "失敗"
+          }`,
+        },
+        {
+          name: "結果",
+          value: ans,
+        },
+        {
+          name: "今日のひとこと",
+          value: fortuneComments.getComment(),
+        }
+      );
     const avatarURL = interaction.user.avatarURL();
     if (avatarURL)
       embed.setAuthor({
@@ -233,6 +236,7 @@ client.on("interactionCreate", async (interaction) => {
     const secondDice = getRandomInt(100);
     const success = secondDice <= fortune;
     const embed = new MessageEmbed()
+      .setTimestamp()
       .setColor(success ? "#00ff00" : "#ff0000")
       .addFields(
         {
