@@ -1,4 +1,12 @@
-import { Message, Client, ApplicationCommandDataResolvable } from "discord.js";
+import {
+  Message,
+  Client,
+  ApplicationCommandDataResolvable,
+  MessageButton,
+  MessageActionRow,
+  MessageEmbed,
+  ColorResolvable,
+} from "discord.js";
 import { fortuneComments } from "./fortuneComments";
 import express from "express";
 const token = process.env.TOKEN;
@@ -74,6 +82,21 @@ const commandData: ApplicationCommandDataResolvable[] = [
     ],
   },
 ];
+const ButtonData: { [index: string]: MessageActionRow } = {};
+
+ButtonData.fortune = new MessageActionRow()
+  .addComponents(
+    new MessageButton()
+      .setCustomId("fortune")
+      .setLabel("/fortune")
+      .setStyle("PRIMARY")
+  )
+  .addComponents(
+    new MessageButton()
+      .setCustomId("cfortune")
+      .setLabel("/cfortune")
+      .setStyle("PRIMARY")
+  );
 
 client.once("ready", async () => {
   console.log(client.user?.tag);
@@ -86,21 +109,25 @@ client.once("ready", async () => {
 });
 
 client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isCommand()) {
+  let commandName: string;
+  if (interaction.isCommand()) {
+    commandName = interaction.commandName;
+  } else if (interaction.isButton()) {
+    commandName = interaction.customId;
+  } else {
     return;
   }
-
   // ping
-  if (interaction.commandName === "ping") {
+  if (commandName === "ping") {
     await interaction.reply("pong!");
-  } else if (interaction.commandName === "commandrefresh") {
+  } else if (interaction.isCommand() && commandName === "commandrefresh") {
     if (interaction.guildId !== null) {
       await client.application?.commands.set(commandData, interaction.guildId);
       await interaction.reply("更新しました");
       return;
     }
     await interaction.reply("更新できませんでした。");
-  } else if (interaction.commandName === "dice") {
+  } else if (interaction.isCommand() && commandName === "dice") {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
@@ -110,7 +137,7 @@ client.on("interactionCreate", async (interaction) => {
     }
     const ans = diceExec(diceData);
     await interaction.reply({ content: ans });
-  } else if (interaction.commandName === "secretdice") {
+  } else if (interaction.isCommand() && commandName === "secretdice") {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
@@ -123,57 +150,120 @@ client.on("interactionCreate", async (interaction) => {
       `${interaction.user.username} > シークレットダイス`
     );
     await interaction.reply({ content: ans, ephemeral: true });
-  } else if (interaction.commandName === "fortune") {
+  } else if (commandName === "fortune") {
+    const colors: { [index: string]: ColorResolvable } = {
+      大吉: "#66ffff",
+      中吉: "#00ccff",
+      小吉: "#99ff99",
+      吉: "#00ff00",
+      末吉: "#ffff00",
+      凶: "#ff3300",
+      大凶: "#330000",
+    };
     const firstDice = getRandomInt(100);
     const secondDice = getRandomInt(100);
-    let ans =
-      `ダイス1投目 → (1d100) → ${firstDice}\n` +
-      `ダイス2投目 → (1d100<=${firstDice}) → ${secondDice} →`;
+    const success = secondDice <= firstDice;
+    let ans: string;
     if (secondDice <= firstDice) {
       if (secondDice <= 5) {
-        ans += "大吉";
+        ans = "大吉";
       } else if (firstDice <= 25) {
-        ans += "中吉";
+        ans = "中吉";
       } else if (firstDice <= 50) {
-        ans += "小吉";
+        ans = "小吉";
       } else {
-        ans += "吉";
+        ans = "吉";
       }
     } else {
       if (secondDice >= 96) {
-        ans += "大凶";
+        ans = "大凶";
       } else if (firstDice <= 50) {
-        ans += "末吉";
+        ans = "末吉";
       } else {
-        ans += "凶";
+        ans = "凶";
       }
     }
-    ans += `\n\n${fortuneComments.getComment()}`;
-    await interaction.reply(ans);
-  } else if (interaction.commandName === "cfortune") {
+    const embed = new MessageEmbed().setColor(colors[ans]).addFields(
+      { name: "ダイス1投目", value: `(1d100) → ${firstDice}\n` },
+      {
+        name: "ダイス2投目",
+        value: `(1d100<=${firstDice}) → ${secondDice} → ${
+          success
+            ? secondDice <= 5
+              ? "決定的成功"
+              : "成功"
+            : secondDice >= 96
+            ? "致命的失敗"
+            : "失敗"
+        }`,
+      },
+      {
+        name: "結果",
+        value: ans,
+      },
+      {
+        name: "今日のひとこと",
+        value: fortuneComments.getComment(),
+      }
+    );
+    const avatarURL = interaction.user.avatarURL();
+    if (avatarURL)
+      embed.setAuthor({
+        name: interaction.user.username,
+        iconURL: avatarURL,
+      });
+    else embed.setAuthor({ name: interaction.user.username });
+
+    await interaction.reply({ embeds: [embed] });
+    await interaction.channel?.send({
+      components: [ButtonData.fortune],
+    });
+  } else if (commandName === "cfortune") {
     const firstDice = [...Array(3)].map((_) => getRandomInt(6));
     const firstDiceSumed = arraySum(firstDice);
     const fortune = firstDiceSumed * 5;
     const secondDice = getRandomInt(100);
     const success = secondDice <= fortune;
-    const ans =
-      `ダイス1投目 → (3d6) → ${firstDiceSumed}[${firstDice.join(
-        ","
-      )}] → ${firstDiceSumed}(幸運:${fortune})\n` +
-      `ダイス2投目 → (1d100<=${fortune}) → ${secondDice} → ${
-        success
-          ? secondDice <= 5
-            ? "決定的成功"
-            : "成功"
-          : secondDice >= 96
-          ? "致命的失敗"
-          : "失敗"
-      }\n\n` +
-      (success
-        ? "貴方の今日という一日に幸あれ"
-        : "この結果に負けず幸せを自分で掴み取っていきましょう");
-    await interaction.reply(ans);
-  } else if (interaction.commandName === "senka") {
+    const embed = new MessageEmbed()
+      .setColor(success ? "#00ff00" : "#ff0000")
+      .addFields(
+        {
+          name: "ダイス1投目",
+          value: `${firstDiceSumed}[${firstDice.join(
+            ","
+          )}] → ${firstDiceSumed}(幸運:${fortune})`,
+        },
+        {
+          name: "ダイス2投目",
+          value: `(1d100<=${fortune}) → ${secondDice} → ${
+            success
+              ? secondDice <= 5
+                ? "決定的成功"
+                : "成功"
+              : secondDice >= 96
+              ? "致命的失敗"
+              : "失敗"
+          }`,
+        },
+        {
+          name: "ひとこと",
+          value: success
+            ? "貴方の今日という一日に幸あれ"
+            : "この結果に負けず幸せを自分で掴み取っていきましょう",
+        }
+      );
+    const avatarURL = interaction.user.avatarURL();
+    if (avatarURL)
+      embed.setAuthor({
+        name: interaction.user.username,
+        iconURL: avatarURL,
+      });
+
+    await interaction.reply({ embeds: [embed] });
+    await interaction.channel?.send({
+      components: [ButtonData.fortune],
+    });
+  } else if (interaction.isCommand() && commandName === "senka") {
     const nowBox = Number(interaction.options.data[0].value); // 現在の箱
     const targetBox = Number(interaction.options.data[1].value); // 目標
     const balance = Number(interaction.options.data[2].value); // 所持戦貨
