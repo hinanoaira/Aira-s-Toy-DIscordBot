@@ -214,10 +214,18 @@ client.on("interactionCreate", async (interaction) => {
       });
     else embed.setAuthor({ name: interaction.user.username });
 
-    await interaction.reply({ embeds: [embed] });
-    await interaction.channel?.send({
-      components: [ButtonData.fortune],
-    });
+    if (interaction.isButton()) {
+      interaction.update({ components: [] });
+      await interaction.channel?.send({
+        embeds: [embed],
+        components: [ButtonData.fortune],
+      });
+    } else {
+      await interaction.reply({
+        embeds: [embed],
+        components: [ButtonData.fortune],
+      });
+    }
   } else if (commandName === "cfortune") {
     const firstDice = [...Array(3)].map((_) => getRandomInt(6));
     const firstDiceSumed = arraySum(firstDice);
@@ -259,10 +267,18 @@ client.on("interactionCreate", async (interaction) => {
         iconURL: avatarURL,
       });
 
-    await interaction.reply({ embeds: [embed] });
-    await interaction.channel?.send({
-      components: [ButtonData.fortune],
-    });
+    if (interaction.isButton()) {
+      interaction.update({ components: [] });
+      await interaction.channel?.send({
+        embeds: [embed],
+        components: [ButtonData.fortune],
+      });
+    } else {
+      await interaction.reply({
+        embeds: [embed],
+        components: [ButtonData.fortune],
+      });
+    }
   } else if (interaction.isCommand() && commandName === "senka") {
     const nowBox = Number(interaction.options.data[0].value); // 現在の箱
     const targetBox = Number(interaction.options.data[1].value); // 目標
