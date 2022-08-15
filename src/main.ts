@@ -101,7 +101,7 @@ ButtonData.fortune = new MessageActionRow()
 client.once("ready", async () => {
   console.log(client.user?.tag);
   try {
-    await client.application?.commands.set(emptyData);
+    await client.application?.commands.set(commandData);
   } catch (e) {
     console.log(e);
   }
@@ -122,7 +122,7 @@ client.on("interactionCreate", async (interaction) => {
     await interaction.reply("pong!");
   } else if (interaction.isCommand() && commandName === "commandrefresh") {
     if (interaction.guildId !== null) {
-      await client.application?.commands.set(commandData, interaction.guildId);
+      await client.application?.commands.set(emptyData, interaction.guildId);
       await interaction.reply("更新しました");
       return;
     }
@@ -344,13 +344,6 @@ client.on("messageCreate", async (message: Message) => {
   const diceData = diceBuild(message.content);
   if (diceData) {
     await message.reply(diceExec(diceData));
-  } else if (message.content === "!airaCommandRegist") {
-    if (message.guildId !== null) {
-      await client.application?.commands.set(commandData, message.guildId);
-      await message.reply("コマンドを更新しました");
-      return;
-    }
-    await message.reply("更新できませんでした");
   } else if (message.content === "!airaCommandDelete") {
     if (message.guildId !== null) {
       await client.application?.commands.set(emptyData, message.guildId);
