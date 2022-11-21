@@ -208,15 +208,15 @@ client.on("interactionCreate", async (interaction) => {
         let nextFortune: number;
         if (success) {
           if (secondDice <= 5) {
-            nextFortune = rawFortune + 2 > 18 ? 18 : rawFortune + 2;
+            nextFortune = rawFortune + 3 > 18 ? 18 : rawFortune + 3;
           } else {
-            nextFortune = rawFortune + 1 > 18 ? 18 : rawFortune + 1;
+            nextFortune = rawFortune - 1 < 3 ? 3 : rawFortune - 1;
           }
         } else {
           if (secondDice >= 96) {
-            nextFortune = rawFortune - 2 < 3 ? 3 : rawFortune - 2;
+            nextFortune = rawFortune - 3 < 3 ? 3 : rawFortune - 3;
           } else {
-            nextFortune = rawFortune - 1 < 3 ? 3 : rawFortune - 1;
+            nextFortune = rawFortune + 1 > 18 ? 18 : rawFortune + 1;
           }
         }
 
