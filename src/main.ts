@@ -9,6 +9,17 @@ import {
 } from "discord.js";
 import { fortuneComments } from "./fortuneComments";
 import express from "express";
+
+import PgClient from "pg";
+const pgClient = new PgClient.Client({
+  user: process.env.PGUSER,
+  password: process.env.PGPASS,
+  host: process.env.PGHOST, // 詳細は後述
+  database: process.env.PGDB,
+  port: 5432,
+});
+pgClient.connect();
+
 const token = process.env.TOKEN;
 if (token === undefined) throw Error("token invalid");
 
@@ -47,11 +58,8 @@ const commandData: ApplicationCommandDataResolvable[] = [
   },
   {
     name: "fortune",
-    description: "1d100を2度振って今日の運勢を占います",
-  },
-  {
-    name: "cfortune",
-    description: "幸運値(3d6*5)で今日の運勢を占います",
+    description:
+      "幸運(アカウント固有)と今日の幸運(3d6*5)の平均値で今日の運勢を占います",
   },
   {
     name: "commandrefresh",
@@ -84,19 +92,12 @@ const commandData: ApplicationCommandDataResolvable[] = [
 ];
 const ButtonData: { [index: string]: MessageActionRow } = {};
 
-ButtonData.fortune = new MessageActionRow()
-  .addComponents(
-    new MessageButton()
-      .setCustomId("fortune")
-      .setLabel("/fortune")
-      .setStyle("PRIMARY")
-  )
-  .addComponents(
-    new MessageButton()
-      .setCustomId("cfortune")
-      .setLabel("/cfortune")
-      .setStyle("PRIMARY")
-  );
+ButtonData.fortune = new MessageActionRow().addComponents(
+  new MessageButton()
+    .setCustomId("fortune")
+    .setLabel("/fortune")
+    .setStyle("PRIMARY")
+);
 
 client.once("ready", async () => {
   console.log(client.user?.tag);
@@ -120,14 +121,9 @@ client.on("interactionCreate", async (interaction) => {
   // ping
   if (commandName === "ping") {
     await interaction.reply("pong!");
-  } else if (interaction.isCommand() && commandName === "commandrefresh") {
-    if (interaction.guildId !== null) {
-      await client.application?.commands.set(emptyData, interaction.guildId);
-      await interaction.reply("更新しました");
-      return;
-    }
-    await interaction.reply("更新できませんでした。");
-  } else if (interaction.isCommand() && commandName === "dice") {
+  }
+  // dice
+  else if (interaction.isCommand() && commandName === "dice") {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
@@ -137,7 +133,9 @@ client.on("interactionCreate", async (interaction) => {
     }
     const ans = diceExec(diceData);
     await interaction.reply({ content: ans });
-  } else if (interaction.isCommand() && commandName === "secretdice") {
+  }
+  // secretdice
+  else if (interaction.isCommand() && commandName === "secretdice") {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
     const diceData = diceBuild(arg);
@@ -150,7 +148,25 @@ client.on("interactionCreate", async (interaction) => {
       `${interaction.user.username} > シークレットダイス`
     );
     await interaction.reply({ content: ans, ephemeral: true });
-  } else if (commandName === "fortune") {
+  }
+  // fortune
+  else if (commandName === "fortune") {
+    let user = await pgClient.query(
+      `select * from users where id='${interaction.user.id}'`
+    );
+    if (user.rows.length < 1) {
+      await pgClient.query(
+        `insert into users values ('${interaction.user.id}', 11, '2000-01-01 00:00:00+09'::TIMESTAMP WITH TIME ZONE, 0, ARRAY[0, 0, 0], 0, '')`
+      );
+      user = await pgClient.query(
+        `select * from users where id='${interaction.user.id}'`
+      );
+    }
+    const dbTimeStamp: Date = user.rows[0]["last_time"];
+    const dbJSTTimeStamp = new Date(
+      Date.now() + (dbTimeStamp.getTimezoneOffset() + 9 * 60) * 60 * 1000
+    );
+    const nowTimeStamp = new Date();
     const colors: { [index: string]: ColorResolvable } = {
       大吉: "#66ffff",
       中吉: "#00ccff",
@@ -160,16 +176,72 @@ client.on("interactionCreate", async (interaction) => {
       凶: "#ff3300",
       大凶: "#330000",
     };
-    const firstDice = getRandomInt(100);
-    const secondDice = getRandomInt(100);
-    const success = secondDice <= firstDice;
+    let firstDice: number[];
+    let secondDice: number;
+    let word: string;
+    let timeStamp: Date;
+    let firstDiceSumed: number;
+    let todayfortune: number;
+    let success: boolean;
+    let rawFortune: number;
+    let fortune: number;
+    const todayCheck =
+      dbJSTTimeStamp.getDate() != nowTimeStamp.getDate() ||
+      dbJSTTimeStamp.getMonth() != nowTimeStamp.getMonth() ||
+      dbJSTTimeStamp.getFullYear() != nowTimeStamp.getFullYear();
+    if (todayCheck) {
+      firstDice = [...Array(3)].map((_) => getRandomInt(6));
+      secondDice = getRandomInt(100);
+      word = fortuneComments.getComment();
+      timeStamp = nowTimeStamp;
+      firstDiceSumed = arraySum(firstDice);
+      todayfortune = firstDiceSumed * 5;
+      success = secondDice <= todayfortune;
+      rawFortune = user.rows[0]["fortune"];
+      fortune = rawFortune * 5;
+
+      let nextFortune: number;
+      if (success) {
+        if (secondDice <= 5) {
+          nextFortune = rawFortune + 2 > 18 ? 18 : rawFortune + 2;
+        } else {
+          nextFortune = rawFortune + 1 > 18 ? 18 : rawFortune + 1;
+        }
+      } else {
+        if (secondDice >= 96) {
+          nextFortune = rawFortune - 2 < 3 ? 3 : rawFortune - 2;
+        } else {
+          nextFortune = rawFortune - 1 < 3 ? 3 : rawFortune - 1;
+        }
+      }
+
+      const querty = `update users set fortune=${nextFortune}, last_time='${timeStamp.toISOString()}'::TIMESTAMP WITH TIME ZONE, last_fortune=${rawFortune}, last_first=ARRAY[${
+        firstDice[0]
+      }, ${firstDice[1]}, ${
+        firstDice[2]
+      }], last_second=${secondDice}, last_word='${word}' where id='${
+        interaction.user.id
+      }'`;
+      await pgClient.query(querty);
+    } else {
+      firstDice = user.rows[0]["last_first"];
+      secondDice = user.rows[0]["last_second"];
+      word = user.rows[0]["last_word"];
+      timeStamp = dbTimeStamp;
+      firstDiceSumed = arraySum(firstDice);
+      todayfortune = firstDiceSumed * 5;
+      success = secondDice <= todayfortune;
+      rawFortune = user.rows[0]["last_fortune"];
+      fortune = rawFortune * 5;
+    }
+    const resultFortune = Math.floor((todayfortune + fortune) / 2);
     let ans: string;
-    if (secondDice <= firstDice) {
+    if (success) {
       if (secondDice <= 5) {
         ans = "大吉";
-      } else if (firstDice <= 25) {
+      } else if (firstDiceSumed <= 5) {
         ans = "中吉";
-      } else if (firstDice <= 50) {
+      } else if (firstDiceSumed <= 10) {
         ans = "小吉";
       } else {
         ans = "吉";
@@ -177,20 +249,29 @@ client.on("interactionCreate", async (interaction) => {
     } else {
       if (secondDice >= 96) {
         ans = "大凶";
-      } else if (firstDice <= 50) {
+      } else if (firstDiceSumed <= 10) {
         ans = "末吉";
       } else {
         ans = "凶";
       }
     }
     const embed = new MessageEmbed()
-      .setTimestamp()
+      .setTimestamp(timeStamp)
       .setColor(colors[ans])
       .addFields(
-        { name: "ダイス1投目", value: `(1d100) → ${firstDice}\n` },
         {
-          name: "ダイス2投目",
-          value: `(1d100<=${firstDice}) → ${secondDice} → ${
+          name: "幸運",
+          value: `${fortune}`,
+        },
+        {
+          name: "今日の幸運",
+          value: `${firstDiceSumed}[${firstDice.join(
+            ","
+          )}] → ${firstDiceSumed}(幸運:${todayfortune})`,
+        },
+        {
+          name: "判定",
+          value: `(1d100<=${resultFortune}) → ${secondDice} → ${
             success
               ? secondDice <= 5
                 ? "決定的成功"
@@ -206,10 +287,16 @@ client.on("interactionCreate", async (interaction) => {
         },
         {
           name: "今日のひとこと",
-          value: fortuneComments.getComment(),
+          value: word,
         }
       );
-    let username = await (
+    if (!todayCheck) {
+      embed.addField(
+        "備考",
+        "本日はすでに引いているため、前回の結果を表示しています。"
+      );
+    }
+    let username = (
       await interaction.guild?.members.fetch({ user: [interaction.user.id] })
     )?.first()?.nickname;
     if (!username) {
@@ -237,70 +324,9 @@ client.on("interactionCreate", async (interaction) => {
         components: [ButtonData.fortune],
       });
     }
-  } else if (commandName === "cfortune") {
-    const firstDice = [...Array(3)].map((_) => getRandomInt(6));
-    const firstDiceSumed = arraySum(firstDice);
-    const fortune = firstDiceSumed * 5;
-    const secondDice = getRandomInt(100);
-    const success = secondDice <= fortune;
-    const embed = new MessageEmbed()
-      .setTimestamp()
-      .setColor(success ? "#00ff00" : "#ff0000")
-      .addFields(
-        {
-          name: "ダイス1投目",
-          value: `${firstDiceSumed}[${firstDice.join(
-            ","
-          )}] → ${firstDiceSumed}(幸運:${fortune})`,
-        },
-        {
-          name: "ダイス2投目",
-          value: `(1d100<=${fortune}) → ${secondDice} → ${
-            success
-              ? secondDice <= 5
-                ? "決定的成功"
-                : "成功"
-              : secondDice >= 96
-              ? "致命的失敗"
-              : "失敗"
-          }`,
-        },
-        {
-          name: "ひとこと",
-          value: success
-            ? "貴方の今日という一日に幸あれ"
-            : "この結果に負けず幸せを自分で掴み取っていきましょう",
-        }
-      );
-    let username = await (
-      await interaction.guild?.members.fetch({ user: [interaction.user.id] })
-    )?.first()?.nickname;
-    if (!username) {
-      username = interaction.user.username;
-    }
-    const avatarURL = interaction.user.avatarURL();
-    if (avatarURL)
-      embed.setAuthor({
-        name: username,
-        iconURL: avatarURL,
-      });
-    else {
-      embed.setAuthor({ name: username });
-    }
-
-    if (interaction.isButton()) {
-      interaction.update({ components: [] });
-      await interaction.channel?.send({
-        embeds: [embed],
-        components: [ButtonData.fortune],
-      });
-    } else {
-      await interaction.reply({
-        embeds: [embed],
-        components: [ButtonData.fortune],
-      });
-    }
-  } else if (interaction.isCommand() && commandName === "senka") {
+  }
+  // senka
+  else if (interaction.isCommand() && commandName === "senka") {
     const nowBox = Number(interaction.options.data[0].value); // 現在の箱
     const targetBox = Number(interaction.options.data[1].value); // 目標
     const balance = Number(interaction.options.data[2].value); // 所持戦貨
