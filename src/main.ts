@@ -47,11 +47,8 @@ const commandData: ApplicationCommandDataResolvable[] = [
   },
   {
     name: "fortune",
-    description: "1d100を2度振って今日の運勢を占います",
-  },
-  {
-    name: "cfortune",
-    description: "幸運値(3d6*5)で今日の運勢を占います",
+    description:
+      "幸運(アカウント固有)と今日の幸運(3d6*5)の平均値で今日の運勢を占います",
   },
   {
     name: "commandrefresh",
@@ -84,19 +81,12 @@ const commandData: ApplicationCommandDataResolvable[] = [
 ];
 const ButtonData: { [index: string]: MessageActionRow } = {};
 
-ButtonData.fortune = new MessageActionRow()
-  .addComponents(
-    new MessageButton()
-      .setCustomId("fortune")
-      .setLabel("/fortune")
-      .setStyle("PRIMARY")
-  )
-  .addComponents(
-    new MessageButton()
-      .setCustomId("cfortune")
-      .setLabel("/cfortune")
-      .setStyle("PRIMARY")
-  );
+ButtonData.fortune = new MessageActionRow().addComponents(
+  new MessageButton()
+    .setCustomId("fortune")
+    .setLabel("/fortune")
+    .setStyle("PRIMARY")
+);
 
 client.once("ready", async () => {
   console.log(client.user?.tag);
@@ -160,16 +150,18 @@ client.on("interactionCreate", async (interaction) => {
       凶: "#ff3300",
       大凶: "#330000",
     };
-    const firstDice = getRandomInt(100);
+    const firstDice = [...Array(3)].map((_) => getRandomInt(6));
+    const firstDiceSumed = arraySum(firstDice);
+    const todayfortune = firstDiceSumed * 5;
     const secondDice = getRandomInt(100);
-    const success = secondDice <= firstDice;
+    const success = secondDice <= todayfortune;
     let ans: string;
-    if (secondDice <= firstDice) {
+    if (success) {
       if (secondDice <= 5) {
         ans = "大吉";
-      } else if (firstDice <= 25) {
+      } else if (firstDiceSumed <= 5) {
         ans = "中吉";
-      } else if (firstDice <= 50) {
+      } else if (firstDiceSumed <= 10) {
         ans = "小吉";
       } else {
         ans = "吉";
@@ -177,7 +169,7 @@ client.on("interactionCreate", async (interaction) => {
     } else {
       if (secondDice >= 96) {
         ans = "大凶";
-      } else if (firstDice <= 50) {
+      } else if (firstDiceSumed <= 10) {
         ans = "末吉";
       } else {
         ans = "凶";
@@ -187,7 +179,12 @@ client.on("interactionCreate", async (interaction) => {
       .setTimestamp()
       .setColor(colors[ans])
       .addFields(
-        { name: "ダイス1投目", value: `(1d100) → ${firstDice}\n` },
+        {
+          name: "ダイス1投目",
+          value: `${firstDiceSumed}[${firstDice.join(
+            ","
+          )}] → ${firstDiceSumed}(幸運:${todayfortune})`,
+        },
         {
           name: "ダイス2投目",
           value: `(1d100<=${firstDice}) → ${secondDice} → ${
@@ -209,70 +206,7 @@ client.on("interactionCreate", async (interaction) => {
           value: fortuneComments.getComment(),
         }
       );
-    let username = await (
-      await interaction.guild?.members.fetch({ user: [interaction.user.id] })
-    )?.first()?.nickname;
-    if (!username) {
-      username = interaction.user.username;
-    }
-    const avatarURL = interaction.user.avatarURL();
-    if (avatarURL)
-      embed.setAuthor({
-        name: username,
-        iconURL: avatarURL,
-      });
-    else {
-      embed.setAuthor({ name: username });
-    }
-
-    if (interaction.isButton()) {
-      interaction.update({ components: [] });
-      await interaction.channel?.send({
-        embeds: [embed],
-        components: [ButtonData.fortune],
-      });
-    } else {
-      await interaction.reply({
-        embeds: [embed],
-        components: [ButtonData.fortune],
-      });
-    }
-  } else if (commandName === "cfortune") {
-    const firstDice = [...Array(3)].map((_) => getRandomInt(6));
-    const firstDiceSumed = arraySum(firstDice);
-    const fortune = firstDiceSumed * 5;
-    const secondDice = getRandomInt(100);
-    const success = secondDice <= fortune;
-    const embed = new MessageEmbed()
-      .setTimestamp()
-      .setColor(success ? "#00ff00" : "#ff0000")
-      .addFields(
-        {
-          name: "ダイス1投目",
-          value: `${firstDiceSumed}[${firstDice.join(
-            ","
-          )}] → ${firstDiceSumed}(幸運:${fortune})`,
-        },
-        {
-          name: "ダイス2投目",
-          value: `(1d100<=${fortune}) → ${secondDice} → ${
-            success
-              ? secondDice <= 5
-                ? "決定的成功"
-                : "成功"
-              : secondDice >= 96
-              ? "致命的失敗"
-              : "失敗"
-          }`,
-        },
-        {
-          name: "ひとこと",
-          value: success
-            ? "貴方の今日という一日に幸あれ"
-            : "この結果に負けず幸せを自分で掴み取っていきましょう",
-        }
-      );
-    let username = await (
+    let username = (
       await interaction.guild?.members.fetch({ user: [interaction.user.id] })
     )?.first()?.nickname;
     if (!username) {
