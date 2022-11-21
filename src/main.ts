@@ -110,13 +110,6 @@ client.on("interactionCreate", async (interaction) => {
   // ping
   if (commandName === "ping") {
     await interaction.reply("pong!");
-  } else if (interaction.isCommand() && commandName === "commandrefresh") {
-    if (interaction.guildId !== null) {
-      await client.application?.commands.set(emptyData, interaction.guildId);
-      await interaction.reply("更新しました");
-      return;
-    }
-    await interaction.reply("更新できませんでした。");
   } else if (interaction.isCommand() && commandName === "dice") {
     const arg = interaction.options.data[0].value;
     if (typeof arg !== "string") return;
