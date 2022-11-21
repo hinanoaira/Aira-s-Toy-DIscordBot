@@ -17,6 +17,7 @@ const pgClient = new PgClient.Client({
   host: process.env.PGHOST, // 詳細は後述
   database: process.env.PGDB,
   port: 5432,
+  ssl: true,
 });
 pgClient.connect();
 
