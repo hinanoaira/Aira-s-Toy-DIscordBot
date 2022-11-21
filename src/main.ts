@@ -157,7 +157,7 @@ client.on("interactionCreate", async (interaction) => {
     );
     if (user.rows.length < 1) {
       await pgClient.query(
-        `insert into users values ('${interaction.user.id}', 11, '2000-01-01 00:00:00+09'::TIMESTAMP WITH TIME ZONE, 0, ARRAY[0, 0, 0], 0, '')`
+        `insert into users values ('${interaction.user.id}', 11, '2000-01-01 00:00:00+09'::TIMESTAMP WITH TIME ZONE, 0, ARRAY[0, 0, 0], 0, 'dummy')`
       );
       user = await pgClient.query(
         `select * from users where id='${interaction.user.id}'`
@@ -165,7 +165,8 @@ client.on("interactionCreate", async (interaction) => {
     }
     const dbTimeStamp: Date = user.rows[0]["last_time"];
     const dbJSTTimeStamp = new Date(
-      Date.now() + (dbTimeStamp.getTimezoneOffset() + 9 * 60) * 60 * 1000
+      dbTimeStamp.getTime() +
+        (dbTimeStamp.getTimezoneOffset() + 9 * 60) * 60 * 1000
     );
     const nowTimeStamp = new Date();
     const colors: { [index: string]: ColorResolvable } = {
