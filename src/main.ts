@@ -262,14 +262,18 @@ client.on("interactionCreate", async (interaction) => {
       .setColor(colors[ans])
       .addFields(
         {
-          name: "幸運",
+          name: "ユーザーの幸運",
           value: `${fortune}`,
         },
         {
           name: "今日の幸運",
           value: `${firstDiceSumed}[${firstDice.join(
             ","
-          )}] → ${firstDiceSumed}(幸運:${todayfortune})`,
+          )}] → ${firstDiceSumed} → ${todayfortune}`,
+        },
+        {
+          name: "幸運値",
+          value: `(${fortune} + ${todayfortune}) / 2 = ${resultFortune}`,
         },
         {
           name: "判定",
