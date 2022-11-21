@@ -187,6 +187,7 @@ client.on("interactionCreate", async (interaction) => {
     let success: boolean;
     let rawFortune: number;
     let fortune: number;
+    let resultFortune;
     const todayCheck =
       dbJSTTimeStamp.getDate() != nowTimeStamp.getDate() ||
       dbJSTTimeStamp.getMonth() != nowTimeStamp.getMonth() ||
@@ -198,9 +199,10 @@ client.on("interactionCreate", async (interaction) => {
       timeStamp = nowTimeStamp;
       firstDiceSumed = arraySum(firstDice);
       todayfortune = firstDiceSumed * 5;
-      success = secondDice <= todayfortune;
       rawFortune = user.rows[0]["fortune"];
       fortune = rawFortune * 5;
+      resultFortune = Math.floor((todayfortune + fortune) / 2);
+      success = secondDice <= resultFortune;
 
       let nextFortune: number;
       if (success) {
@@ -232,11 +234,11 @@ client.on("interactionCreate", async (interaction) => {
       timeStamp = dbTimeStamp;
       firstDiceSumed = arraySum(firstDice);
       todayfortune = firstDiceSumed * 5;
-      success = secondDice <= todayfortune;
       rawFortune = user.rows[0]["last_fortune"];
       fortune = rawFortune * 5;
+      resultFortune = Math.floor((todayfortune + fortune) / 2);
+      success = secondDice <= todayfortune;
     }
-    const resultFortune = Math.floor((todayfortune + fortune) / 2);
     let ans: string;
     if (success) {
       if (secondDice <= 5) {
