@@ -9,6 +9,7 @@ import {
 } from "discord.js";
 import { fortuneComments } from "./fortuneComments";
 import express from "express";
+import axios from "axios";
 
 import PgClient from "pg";
 const pgClient = new PgClient.Client({
@@ -24,38 +25,20 @@ pgClient.connect();
 const token = process.env.TOKEN;
 if (token === undefined) throw Error("token invalid");
 
+const apiClient = axios.create({
+  baseURL: "https://bcdice.onlinesession.app",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 const client = new Client({
   intents: ["GUILDS", "GUILD_MEMBERS", "GUILD_MESSAGES"],
 });
-const emptyData: ApplicationCommandDataResolvable[] = [];
 const commandData: ApplicationCommandDataResolvable[] = [
   {
     name: "ping",
     description: "pong!",
-  },
-  {
-    name: "dice",
-    description: "ダイスロールを行います",
-    options: [
-      {
-        type: "STRING",
-        name: "dice",
-        description: "ダイスコマンド",
-        required: true,
-      },
-    ],
-  },
-  {
-    name: "secretdice",
-    description: "他の人に見えない形でダイスロールを行います",
-    options: [
-      {
-        type: "STRING",
-        name: "dice",
-        description: "ダイスコマンド",
-        required: true,
-      },
-    ],
   },
   {
     name: "fortune",
@@ -123,33 +106,6 @@ client.on("interactionCreate", async (interaction) => {
     // ping
     if (commandName === "ping") {
       await interaction.reply("pong!");
-    }
-    // dice
-    else if (interaction.isCommand() && commandName === "dice") {
-      const arg = interaction.options.data[0].value;
-      if (typeof arg !== "string") return;
-      const diceData = diceBuild(arg);
-      if (!diceData) {
-        await interaction.reply("こまんどがへんです。。。");
-        return;
-      }
-      const ans = diceExec(diceData);
-      await interaction.reply({ content: ans });
-    }
-    // secretdice
-    else if (interaction.isCommand() && commandName === "secretdice") {
-      const arg = interaction.options.data[0].value;
-      if (typeof arg !== "string") return;
-      const diceData = diceBuild(arg);
-      if (!diceData) {
-        await interaction.reply("こまんどがへんです。。。");
-        return;
-      }
-      const ans = diceExec(diceData);
-      await interaction.channel?.send(
-        `${interaction.user.username} > シークレットダイス`
-      );
-      await interaction.reply({ content: ans, ephemeral: true });
     }
     // fortune
     else if (commandName === "fortune") {
@@ -376,16 +332,22 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.on("messageCreate", async (message: Message) => {
-  const diceData = diceBuild(message.content);
-  if (diceData) {
-    await message.reply(diceExec(diceData));
-  } else if (message.content === "!airaCommandDelete") {
-    if (message.guildId !== null) {
-      await client.application?.commands.set(emptyData, message.guildId);
-      await message.reply("コマンドを削除しました");
-      return;
+  try {
+    if (!message.member?.user.bot) {
+      const diceAnswer = await diceExec(message.content);
+      if (diceAnswer != null) {
+        const ans = diceAnswer.text.replace(/＞/g, "→");
+        if (diceAnswer.secret) {
+          const dm = await message.member?.user.createDM();
+          dm?.send(ans);
+          await message.reply("シークレットダイス");
+        } else {
+          await message.reply(ans);
+        }
+      }
     }
-    await message.reply("更新できませんでした");
+  } catch (e) {
+    console.log(e);
   }
 });
 
@@ -401,118 +363,42 @@ function arraySum(data: Array<number>) {
   return ans;
 }
 
-function thresholdCheck(num: Number, threshold: Number, lessThan: Boolean) {
-  if (lessThan) {
-    return num < threshold;
-  } else {
-    return num <= threshold;
-  }
+interface DiceResponse {
+  ok: boolean;
+  text: string;
+  secret: boolean;
+  success: boolean;
+  failure: boolean;
+  critical: boolean;
+  fumble: boolean;
+  rands: [
+    {
+      kind: string;
+      sides: number;
+      value: number;
+    }
+  ];
 }
 
-function diceBuild(message: String) {
-  message = message.toLowerCase();
-
-  let messageData: RegExpMatchArray | null;
-
-  // dice
-  messageData = message.match(
-    /^((100|[1-9][0-9]?)[dD](100|[1-9][0-9]?)|ccb|cc)(<=?(100|[1-9][0-9]?))?/
-  );
-  if (messageData) {
-    return messageData[0];
-  }
-
-  // res
-  messageData = message.match(/^res\((100|[1-9][0-9]?)-(100|[1-9][0-9]?)\)/);
-  if (messageData) {
-    const me = Number(messageData[1]);
-    const you = Number(messageData[2]);
-    const threshold = 50 + (me - you) * 5;
-    return `1d100<=${threshold}`;
-  }
-
-  // cbr
-  messageData = message.match(/^cbr\((100|[1-9][0-9]?),(100|[1-9][0-9]?)\)/);
-  if (messageData) {
-    const one = Number(messageData[1]);
-    const two = Number(messageData[2]);
-    return `1d100<=${one},${two}`;
-  }
-  return null;
-}
-
-function diceExec(diceCommand: string) {
-  // ダイス実行
-  let diceData: string[];
-  let dice: number[] | null = null;
-  let type: string = "";
-  diceData = String(diceCommand.match(/^[1-9][0-9]*[d][1-9][0-9]*/)).split("d");
-  if (diceData[0] !== "null") {
-    dice = diceData.map((e) => Number(e));
-    type = "number";
-  }
-  if (dice == null) {
-    diceData = [String(diceCommand.match(/^ccb<=/))];
-    if (diceData[0] !== "null") {
-      dice = [1, 100];
-      type = "ccb";
-    }
-  }
-  if (dice == null) {
-    diceData = [String(diceCommand.match(/^cc<=/))];
-    if (diceData[0] !== "null") {
-      dice = [1, 100];
-      type = "cc";
-    }
-  }
-
-  if (dice == null) {
-    return "Error";
-  }
-
-  const results = [...Array(diceData[0])].map((_) => getRandomInt(dice![1]));
-  const total = arraySum(results);
-
-  let ans = `(${diceCommand}) → `;
-  if (dice[0] === 1) ans += String(total);
-  else ans += `${total}[${results.join(",")}] → ${total}`;
-
-  // 成否判定
-  const thresholdData = diceCommand.match(/<=?([1-9][0-9]*)(,([1-9][0-9]*))?$/);
-  const lessThan = !diceCommand.includes("<=");
-
-  if (thresholdData) {
-    if (thresholdData[3] !== undefined) {
-      const data1 = thresholdCheck(total, Number(thresholdData[1]), lessThan);
-      const data2 = thresholdCheck(total, Number(thresholdData[3]), lessThan);
-      ans += `[${data1 ? "成功" : "失敗"},${data2 ? "成功" : "失敗"}] → `;
-      if (data1 && data2)
-        ans +=
-          (type === "ccb" && total <= 5) || (type === "cc" && total <= 1)
-            ? "決定的成功"
-            : "成功";
-      else if (data1 !== data2) ans += "部分的成功";
-      else
-        ans +=
-          (type === "ccb" && total >= 96) || (type === "cc" && total >= 100)
-            ? "致命的失敗"
-            : "失敗";
+const diceExec = async (diceCommand: string) => {
+  try {
+    const { data }: { data: DiceResponse } = await apiClient.get(
+      `/v2/game_system/Cthulhu/roll`,
+      {
+        params: {
+          command: diceCommand,
+        },
+      }
+    );
+    if (data.ok) {
+      return data;
     } else {
-      const data1 = thresholdCheck(total, Number(thresholdData[1]), lessThan);
-      ans += ` → ${
-        data1
-          ? (type === "ccb" && total <= 5) || (type === "cc" && total <= 1)
-            ? "決定的成功"
-            : "成功"
-          : (type === "ccb" && total >= 96) || (type === "cc" && total >= 100)
-          ? "致命的失敗"
-          : "失敗"
-      }`;
+      return null;
     }
+  } catch (e) {
+    return null;
   }
-
-  return ans;
-}
+};
 
 function getRequiredSenkaByBox(boxNo: Number) {
   if (boxNo <= 4) return 2200;
