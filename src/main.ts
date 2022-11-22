@@ -222,7 +222,7 @@ client.on("interactionCreate", async (interaction) => {
           }
         }
 
-        const querty = `update users set fortune=${nextFortune}, last_time='${timeStamp.toISOString()}'::TIMESTAMP WITH TIME ZONE, last_fortune=${rawFortune}, last_first=ARRAY[${
+        const querty = `update users set fortune=${nextFortune}, last_time='${timeStamp.toLocaleString()}+09'::TIMESTAMP WITH TIME ZONE, last_fortune=${rawFortune}, last_first=ARRAY[${
           firstDice[0]
         }, ${firstDice[1]}, ${
           firstDice[2]
