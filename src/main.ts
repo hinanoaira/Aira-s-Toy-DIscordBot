@@ -221,14 +221,9 @@ client.on("interactionCreate", async (interaction) => {
             nextFortune = rawFortune + 1 > 18 ? 18 : rawFortune + 1;
           }
         }
-
-        const querty = `update users set fortune=${nextFortune}, last_time='${timeStamp.toLocaleString()}+09'::TIMESTAMP WITH TIME ZONE, last_fortune=${rawFortune}, last_first=ARRAY[${
-          firstDice[0]
-        }, ${firstDice[1]}, ${
-          firstDice[2]
-        }], last_second=${secondDice}, last_word='${word}' where id='${
-          interaction.user.id
-        }'`;
+        const formtedTime = `${nowTimeStamp.getFullYear}/${nowTimeStamp.getMonth}/${nowTimeStamp.getDate} ${nowTimeStamp.getHours}:${nowTimeStamp.getMinutes}:${nowTimeStamp.getSeconds}+09`;
+        const querty = `update users set fortune=${nextFortune}, last_time='${formtedTime}'::TIMESTAMP WITH TIME ZONE, last_fortune=${rawFortune}, last_first=ARRAY[${firstDice[0]}, ${firstDice[1]}, ${firstDice[2]}], last_second=${secondDice}, last_word='${word}' where id='${interaction.user.id}'`;
+        console.log(querty);
         await pgClient.query(querty);
       } else {
         firstDice = user.rows[0]["last_first"];
