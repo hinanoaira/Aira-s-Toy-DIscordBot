@@ -221,7 +221,7 @@ client.on("interactionCreate", async (interaction) => {
             nextFortune = rawFortune + 1 > 18 ? 18 : rawFortune + 1;
           }
         }
-        const formtedTime = `${nowTimeStamp.getFullYear}/${nowTimeStamp.getMonth}/${nowTimeStamp.getDate} ${nowTimeStamp.getHours}:${nowTimeStamp.getMinutes}:${nowTimeStamp.getSeconds}+09`;
+        const formtedTime = `${nowTimeStamp.getFullYear()}/${nowTimeStamp.getMonth()}/${nowTimeStamp.getDate()} ${nowTimeStamp.getHours()}:${nowTimeStamp.getMinutes()}:${nowTimeStamp.getSeconds()}+09`;
         const querty = `update users set fortune=${nextFortune}, last_time='${formtedTime}'::TIMESTAMP WITH TIME ZONE, last_fortune=${rawFortune}, last_first=ARRAY[${firstDice[0]}, ${firstDice[1]}, ${firstDice[2]}], last_second=${secondDice}, last_word='${word}' where id='${interaction.user.id}'`;
         console.log(querty);
         await pgClient.query(querty);
@@ -502,7 +502,7 @@ try {
 const app: express.Express = express();
 const port = process.env.PORT || 3000;
 app.get("/*", (_, res: express.Response) => {
-  res.send("Hello,World!");
+  res.send(`${client.user?.tag ?? "none"}`);
 });
 app.listen(port, () => {
   console.log(`Listening: http://localhost:${port}`);
