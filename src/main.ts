@@ -410,11 +410,13 @@ function thresholdCheck(num: Number, threshold: Number, lessThan: Boolean) {
 }
 
 function diceBuild(message: String) {
+  message = message.toLowerCase();
+
   let messageData: RegExpMatchArray | null;
 
   // dice
   messageData = message.match(
-    /^(100|[1-9][0-9]?)[dD](100|[1-9][0-9]?)(<=?(100|[1-9][0-9]?))?/
+    /^((100|[1-9][0-9]?)[dD](100|[1-9][0-9]?)|ccb|cc)(<=?(100|[1-9][0-9]?))?/
   );
   if (messageData) {
     return messageData[0];
@@ -439,44 +441,70 @@ function diceBuild(message: String) {
   return null;
 }
 
-function diceExec(diceData: string) {
-  if (diceData.match(/D/)) diceData = diceData.replace("D", "d");
-
+function diceExec(diceCommand: string) {
   // ダイス実行
-  const diceCommand = String(diceData.match(/^[1-9][0-9]*[d][1-9][0-9]*/))
-    .split("d")
-    .map((item) => Number(item));
-  const results = [...Array(diceCommand[0])].map((_) =>
-    getRandomInt(diceCommand[1])
-  );
+  let diceData: string[];
+  let dice: number[] | null = null;
+  let type: string = "";
+  diceData = String(diceCommand.match(/^[1-9][0-9]*[d][1-9][0-9]*/)).split("d");
+  if (diceData[0] !== "null") {
+    dice = diceData.map((e) => Number(e));
+    type = "number";
+  }
+  if (dice == null) {
+    diceData = [String(diceCommand.match(/^ccb<=/))];
+    if (diceData[0] !== "null") {
+      dice = [1, 100];
+      type = "ccb";
+    }
+  }
+  if (dice == null) {
+    diceData = [String(diceCommand.match(/^cc<=/))];
+    if (diceData[0] !== "null") {
+      dice = [1, 100];
+      type = "cc";
+    }
+  }
+
+  if (dice == null) {
+    return "Error";
+  }
+
+  const results = [...Array(diceData[0])].map((_) => getRandomInt(dice![1]));
   const total = arraySum(results);
 
-  let ans = `(${diceData}) → `;
-  if (diceCommand[0] === 1) ans += String(total);
+  let ans = `(${diceCommand}) → `;
+  if (dice[0] === 1) ans += String(total);
   else ans += `${total}[${results.join(",")}] → ${total}`;
 
   // 成否判定
-  const thresholdData = diceData.match(/<=?([1-9][0-9]*)(,([1-9][0-9]*))?$/);
-  const lessThan = !diceData.includes("<=");
+  const thresholdData = diceCommand.match(/<=?([1-9][0-9]*)(,([1-9][0-9]*))?$/);
+  const lessThan = !diceCommand.includes("<=");
 
   if (thresholdData) {
-    const dicen = diceCommand.join("d");
     if (thresholdData[3] !== undefined) {
       const data1 = thresholdCheck(total, Number(thresholdData[1]), lessThan);
       const data2 = thresholdCheck(total, Number(thresholdData[3]), lessThan);
       ans += `[${data1 ? "成功" : "失敗"},${data2 ? "成功" : "失敗"}] → `;
       if (data1 && data2)
-        ans += dicen === "1d100" && total <= 5 ? "決定的成功" : "成功";
+        ans +=
+          (type === "ccb" && total <= 5) || (type === "cc" && total <= 1)
+            ? "決定的成功"
+            : "成功";
       else if (data1 !== data2) ans += "部分的成功";
-      else ans += dicen === "1d100" && total >= 95 ? "致命的失敗" : "失敗";
+      else
+        ans +=
+          (type === "ccb" && total >= 96) || (type === "cc" && total >= 100)
+            ? "致命的失敗"
+            : "失敗";
     } else {
       const data1 = thresholdCheck(total, Number(thresholdData[1]), lessThan);
       ans += ` → ${
         data1
-          ? dicen === "1d100" && total <= 5
+          ? (type === "ccb" && total <= 5) || (type === "cc" && total <= 1)
             ? "決定的成功"
             : "成功"
-          : dicen === "1d100" && total >= 96
+          : (type === "ccb" && total >= 96) || (type === "cc" && total >= 100)
           ? "致命的失敗"
           : "失敗"
       }`;
