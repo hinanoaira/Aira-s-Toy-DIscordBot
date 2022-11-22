@@ -167,9 +167,11 @@ client.on("interactionCreate", async (interaction) => {
       const dbTimeStamp: Date = user.rows[0]["last_time"];
       const dbJSTTimeStamp = new Date(
         dbTimeStamp.getTime() +
-          (dbTimeStamp.getTimezoneOffset() + 9 * 60) * 60 * 1000
+          (dbTimeStamp.getTimezoneOffset() + 10 * 60) * 60 * 1000
       );
-      const nowTimeStamp = new Date();
+      const nowTimeStamp = new Date(
+        Date.now() + (new Date().getTimezoneOffset() + 9 * 60) * 60 * 1000
+      );
       const colors: { [index: string]: ColorResolvable } = {
         大吉: "#66ffff",
         中吉: "#00ccff",
