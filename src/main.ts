@@ -151,7 +151,7 @@ client.on("interactionCreate", async (interaction) => {
         dbJSTTimeStamp.getDate() != nowTimeStamp.getDate() ||
         dbJSTTimeStamp.getMonth() != nowTimeStamp.getMonth() ||
         dbJSTTimeStamp.getFullYear() != nowTimeStamp.getFullYear();
-      if (true) {
+      if (todayCheck) {
         firstDice = [...Array(3)].map((_) => getRandomInt(6));
         secondDice = getRandomInt(100);
         word = fortuneComments.getComment();
@@ -182,7 +182,7 @@ client.on("interactionCreate", async (interaction) => {
           }
         }
         if (secondDice <= 5 || 96 <= secondDice) {
-          nextFortune = rawFortune + coefficient * -2;
+          nextFortune = rawFortune + coefficient * 3;
         } else {
           nextFortune = rawFortune + coefficient;
         }
@@ -197,6 +197,17 @@ client.on("interactionCreate", async (interaction) => {
         const querty = `update users set fortune=${nextFortune}, last_time='${formtedTime}'::TIMESTAMP WITH TIME ZONE, last_fortune=${rawFortune}, last_first=ARRAY[${firstDice[0]}, ${firstDice[1]}, ${firstDice[2]}], last_second=${secondDice}, last_word='${word}' where id='${interaction.user.id}'`;
         console.log(querty);
         await pgClient.query(querty);
+      } else {
+        firstDice = user.rows[0]["last_first"];
+        secondDice = user.rows[0]["last_second"];
+        word = user.rows[0]["last_word"];
+        timeStamp = dbTimeStamp;
+        firstDiceSumed = arraySum(firstDice);
+        todayfortune = firstDiceSumed * 5;
+        rawFortune = user.rows[0]["last_fortune"];
+        fortune = rawFortune * 5;
+        resultFortune = Math.floor((todayfortune + fortune) / 2);
+        success = secondDice <= resultFortune;
       }
       let ans: string;
       if (success) {
