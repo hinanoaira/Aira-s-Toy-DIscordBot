@@ -121,13 +121,7 @@ client.on("interactionCreate", async (interaction) => {
         );
       }
       const dbTimeStamp: Date = user.rows[0]["last_time"];
-      const dbJSTTimeStamp = new Date(
-        dbTimeStamp.getTime() +
-          (dbTimeStamp.getTimezoneOffset() + 10 * 60) * 60 * 1000
-      );
-      const nowTimeStamp = new Date(
-        Date.now() + (new Date().getTimezoneOffset() + 9 * 60) * 60 * 1000
-      );
+      const nowTimeStamp = new Date();
       const colors: { [index: string]: ColorResolvable } = {
         大吉: "#66ffff",
         中吉: "#00ccff",
@@ -148,9 +142,9 @@ client.on("interactionCreate", async (interaction) => {
       let fortune: number;
       let resultFortune;
       const todayCheck =
-        dbJSTTimeStamp.getDate() != nowTimeStamp.getDate() ||
-        dbJSTTimeStamp.getMonth() != nowTimeStamp.getMonth() ||
-        dbJSTTimeStamp.getFullYear() != nowTimeStamp.getFullYear();
+        dbTimeStamp.getDate() != nowTimeStamp.getDate() ||
+        dbTimeStamp.getMonth() != nowTimeStamp.getMonth() ||
+        dbTimeStamp.getFullYear() != nowTimeStamp.getFullYear();
       if (todayCheck) {
         firstDice = [...Array(3)].map((_) => getRandomInt(6));
         secondDice = getRandomInt(100);
@@ -193,7 +187,9 @@ client.on("interactionCreate", async (interaction) => {
           nextFortune = 18;
         }
 
-        const formtedTime = `${nowTimeStamp.getFullYear()}/${nowTimeStamp.getMonth()}/${nowTimeStamp.getDate()} ${nowTimeStamp.getHours()}:${nowTimeStamp.getMinutes()}:${nowTimeStamp.getSeconds()}+09`;
+        const formtedTime = `${nowTimeStamp.getFullYear()}/${
+          nowTimeStamp.getMonth() + 1
+        }/${nowTimeStamp.getDate()} ${nowTimeStamp.getHours()}:${nowTimeStamp.getMinutes()}:${nowTimeStamp.getSeconds()}+09`;
         const querty = `update users set fortune=${nextFortune}, last_time='${formtedTime}'::TIMESTAMP WITH TIME ZONE, last_fortune=${rawFortune}, last_first=ARRAY[${firstDice[0]}, ${firstDice[1]}, ${firstDice[2]}], last_second=${secondDice}, last_word='${word}' where id='${interaction.user.id}'`;
         console.log(querty);
         await pgClient.query(querty);
