@@ -211,7 +211,7 @@ client.on("interactionCreate", async (interaction) => {
           ans = "大吉";
         } else if (firstDiceSumed <= 6) {
           ans = "末吉";
-        } else if (firstDiceSumed <= 15) {
+        } else if (firstDiceSumed <= 14) {
           ans = "吉";
         } else {
           ans = "中吉";
@@ -219,7 +219,7 @@ client.on("interactionCreate", async (interaction) => {
       } else {
         if (secondDice >= 96) {
           ans = "大凶";
-        } else if (firstDiceSumed <= 12) {
+        } else if (firstDiceSumed <= 10) {
           ans = "凶";
         } else {
           ans = "小吉";
