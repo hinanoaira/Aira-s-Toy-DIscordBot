@@ -147,7 +147,6 @@ client.on("interactionCreate", async (interaction) => {
       let rawFortune: number;
       let fortune: number;
       let resultFortune;
-      let coefficient: number;
       const todayCheck =
         dbJSTTimeStamp.getDate() != nowTimeStamp.getDate() ||
         dbJSTTimeStamp.getMonth() != nowTimeStamp.getMonth() ||
@@ -168,7 +167,7 @@ client.on("interactionCreate", async (interaction) => {
 
         const lastDiff = rawFortune - user.rows[0]["last_fortune"];
 
-        //let coefficient: number;
+        let coefficient: number;
         if (success) {
           if (lastDiff < 0 && user.rows[0]["last_second"] < 96) {
             coefficient = lastDiff - 1;
@@ -256,10 +255,6 @@ client.on("interactionCreate", async (interaction) => {
           {
             name: "今日のひとこと",
             value: word,
-          },
-          {
-            name: "debug",
-            value: coefficient.toString(),
           }
         );
       if (!todayCheck) {
