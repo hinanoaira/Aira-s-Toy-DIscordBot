@@ -210,19 +210,19 @@ client.on("interactionCreate", async (interaction) => {
         if (secondDice <= 5) {
           ans = "大吉";
         } else if (firstDiceSumed <= 6) {
-          ans = "中吉";
+          ans = "末吉";
         } else if (firstDiceSumed <= 16) {
           ans = "吉";
         } else {
-          ans = "末吉";
+          ans = "中吉";
         }
       } else {
         if (secondDice >= 96) {
           ans = "大凶";
-        } else if (firstDiceSumed <= 12) {
-          ans = "小吉";
-        } else {
+        } else if (firstDiceSumed <= 10) {
           ans = "凶";
+        } else {
+          ans = "小吉";
         }
       }
       const embed = new MessageEmbed()
