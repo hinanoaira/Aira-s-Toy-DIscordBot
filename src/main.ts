@@ -176,7 +176,7 @@ client.on("interactionCreate", async (interaction) => {
           }
         }
         if (secondDice <= 5 || 96 <= secondDice) {
-          nextFortune = rawFortune + coefficient * 3;
+          nextFortune = rawFortune + coefficient * -3;
         } else {
           nextFortune = rawFortune + coefficient;
         }
