@@ -127,7 +127,7 @@ client.on("interactionCreate", async (interaction) => {
         中吉: "#00ccff",
         小吉: "#99ff99",
         吉: "#00ff00",
-        末吉: "#ffff00",
+        末吉: "#88ff00",
         凶: "#ff3300",
         大凶: "#330000",
       };
@@ -245,7 +245,7 @@ client.on("interactionCreate", async (interaction) => {
           },
           {
             name: "判定",
-            value: `(1d100<=${resultFortune}) → ${secondDice} → ${
+            value: `(CCB<=${resultFortune}) → ${secondDice} → ${
               success
                 ? secondDice <= 5
                   ? "決定的成功"
