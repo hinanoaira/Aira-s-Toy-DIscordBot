@@ -23,6 +23,7 @@ const pgClient = new PgClient.Client({
 pgClient.connect();
 
 const token = process.env.TOKEN;
+const debug = process.env.DEBUG;
 if (token === undefined) throw Error("token invalid");
 
 const apiClient = axios.create({
@@ -131,38 +132,42 @@ client.on("interactionCreate", async (interaction) => {
         凶: "#ff3300",
         大凶: "#330000",
       };
-      let firstDice: number[];
-      let secondDice: number;
+      let firstDice: DiceResponse;
+      let secondDice: DiceResponse;
       let word: string;
       let timeStamp: Date;
       let firstDiceSumed: number;
       let todayfortune: number;
-      let success: boolean;
       let rawFortune: number;
       let fortune: number;
-      let resultFortune;
+      let resultFortune: number;
       const todayCheck =
         dbTimeStamp.getDate() != nowTimeStamp.getDate() ||
         dbTimeStamp.getMonth() != nowTimeStamp.getMonth() ||
         dbTimeStamp.getFullYear() != nowTimeStamp.getFullYear();
-      if (todayCheck) {
-        firstDice = [...Array(3)].map((_) => getRandomInt(6));
-        secondDice = getRandomInt(100);
-        word = fortuneComments.getComment();
+      if (todayCheck || debug == "true") {
         timeStamp = nowTimeStamp;
-        firstDiceSumed = arraySum(firstDice);
-        todayfortune = firstDiceSumed * 5;
         rawFortune = user.rows[0]["fortune"];
         fortune = rawFortune * 5;
+
+        firstDice = (await diceExec("3d6"))!;
+        firstDiceSumed = arraySum(firstDice.rands.map((i) => i.value));
+        todayfortune = firstDiceSumed * 5;
         resultFortune = Math.floor((todayfortune + fortune) / 2);
-        success = secondDice <= resultFortune;
+
+        secondDice = (await diceExec(`CCB<=${resultFortune}`))!;
+
+        const wordDice = (await diceExec(
+          `1d${fortuneComments.comments.length}`
+        ))!;
+        word = fortuneComments.comments[wordDice.rands[0].value - 1];
 
         let nextFortune: number;
 
         const lastDiff = rawFortune - user.rows[0]["last_fortune"];
 
         let coefficient: number;
-        if (success) {
+        if (secondDice.success) {
           if (lastDiff < 0 && user.rows[0]["last_second"] < 96) {
             coefficient = lastDiff - 1;
           } else {
@@ -175,7 +180,7 @@ client.on("interactionCreate", async (interaction) => {
             coefficient = 1;
           }
         }
-        if (secondDice <= 5 || 96 <= secondDice) {
+        if (secondDice.critical || secondDice.fumble) {
           nextFortune = rawFortune + coefficient * -3;
         } else {
           nextFortune = rawFortune + coefficient;
@@ -190,24 +195,65 @@ client.on("interactionCreate", async (interaction) => {
         const formtedTime = `${nowTimeStamp.getFullYear()}/${
           nowTimeStamp.getMonth() + 1
         }/${nowTimeStamp.getDate()} ${nowTimeStamp.getHours()}:${nowTimeStamp.getMinutes()}:${nowTimeStamp.getSeconds()}+09`;
-        const querty = `update users set fortune=${nextFortune}, last_time='${formtedTime}'::TIMESTAMP WITH TIME ZONE, last_fortune=${rawFortune}, last_first=ARRAY[${firstDice[0]}, ${firstDice[1]}, ${firstDice[2]}], last_second=${secondDice}, last_word='${word}' where id='${interaction.user.id}'`;
+        const querty = `update users set fortune=${nextFortune}, last_time='${formtedTime}'::TIMESTAMP WITH TIME ZONE, last_fortune=${rawFortune}, last_first=ARRAY[${firstDice.rands[0].value}, ${firstDice.rands[1].value}, ${firstDice.rands[2].value}], last_second=${secondDice.rands[0].value}, last_word='${word}' where id='${interaction.user.id}'`;
         console.log(querty);
         await pgClient.query(querty);
       } else {
-        firstDice = user.rows[0]["last_first"];
-        secondDice = user.rows[0]["last_second"];
+        const firstRands: number[] = user.rows[0]["last_first"];
         word = user.rows[0]["last_word"];
         timeStamp = dbTimeStamp;
-        firstDiceSumed = arraySum(firstDice);
+        firstDiceSumed = arraySum(firstRands);
         todayfortune = firstDiceSumed * 5;
         rawFortune = user.rows[0]["last_fortune"];
         fortune = rawFortune * 5;
         resultFortune = Math.floor((todayfortune + fortune) / 2);
-        success = secondDice <= resultFortune;
+        firstDice = {
+          ok: true,
+          text: `(3D6) ＞ ${firstDiceSumed}[${firstRands.join(
+            ","
+          )}] ＞ ${firstDiceSumed}`,
+          secret: false,
+          success: false,
+          failure: false,
+          critical: false,
+          fumble: false,
+          rands: firstRands.map((e) => {
+            return { kind: "normal", sides: 6, value: e };
+          }),
+        };
+        const secondRands: number[] = [user.rows[0]["last_second"]];
+        const success = secondRands[0] <= resultFortune;
+        const critical = secondRands[0] <= 5;
+        const fumble = secondRands[0] >= 96;
+        const spetial = secondRands[0] <= resultFortune / 5;
+        secondDice = {
+          ok: true,
+          text: `(1D100<=${resultFortune}) ＞ ${secondRands[0]} ＞ ${
+            success
+              ? critical
+                ? spetial
+                  ? "決定的成功/スペシャル"
+                  : "決定的成功"
+                : spetial
+                ? "スペシャル"
+                : "成功"
+              : fumble
+              ? "致命的失敗"
+              : "失敗"
+          }`,
+          secret: false,
+          success: success,
+          failure: false,
+          critical: critical,
+          fumble: fumble,
+          rands: secondRands.map((e) => {
+            return { kind: "normal", sides: 6, value: e };
+          }),
+        };
       }
       let ans: string;
-      if (success) {
-        if (secondDice <= 5) {
+      if (secondDice.success) {
+        if (secondDice.critical) {
           ans = "大吉";
         } else if (firstDiceSumed <= 6) {
           ans = "末吉";
@@ -217,7 +263,7 @@ client.on("interactionCreate", async (interaction) => {
           ans = "中吉";
         }
       } else {
-        if (secondDice >= 96) {
+        if (secondDice.fumble) {
           ans = "大凶";
         } else if (firstDiceSumed <= 10) {
           ans = "凶";
@@ -235,9 +281,7 @@ client.on("interactionCreate", async (interaction) => {
           },
           {
             name: "今日の幸運",
-            value: `${firstDiceSumed}[${firstDice.join(
-              ","
-            )}] → ${firstDiceSumed} → ${todayfortune}`,
+            value: firstDice.text,
           },
           {
             name: "幸運値",
@@ -245,15 +289,7 @@ client.on("interactionCreate", async (interaction) => {
           },
           {
             name: "判定",
-            value: `(CCB<=${resultFortune}) → ${secondDice} → ${
-              success
-                ? secondDice <= 5
-                  ? "決定的成功"
-                  : "成功"
-                : secondDice >= 96
-                ? "致命的失敗"
-                : "失敗"
-            }`,
+            value: secondDice.text,
           },
           {
             name: "結果",
@@ -264,7 +300,7 @@ client.on("interactionCreate", async (interaction) => {
             value: word,
           }
         );
-      if (!todayCheck) {
+      if (!todayCheck && debug != "true") {
         embed.addField(
           "備考",
           "本日はすでに引いているため、前回の結果を表示しています。"
@@ -339,7 +375,10 @@ client.on("interactionCreate", async (interaction) => {
       interaction.reply(ans);
     }
   } catch (e) {
-    console.log(e);
+    if (!interaction.isCommand() || !interaction.isButton()) {
+      return;
+    }
+    interaction.reply("エラーが発生しました");
   }
 });
 
@@ -350,13 +389,12 @@ client.on("messageCreate", async (message: Message) => {
     if (!message.member?.user.bot && regex.test(message.content)) {
       const diceAnswer = await diceExec(message.content);
       if (diceAnswer != null) {
-        const ans = diceAnswer.text.replace(/＞/g, "→");
         if (diceAnswer.secret) {
           const dm = await message.member?.user.createDM();
-          dm?.send(ans);
+          dm?.send(diceAnswer.text);
           await message.reply("シークレットダイス");
         } else {
-          await message.reply(ans);
+          await message.reply(diceAnswer.text);
         }
       }
     }
@@ -364,10 +402,6 @@ client.on("messageCreate", async (message: Message) => {
     console.log(e);
   }
 });
-
-function getRandomInt(max: number) {
-  return Math.ceil(Math.random() * max);
-}
 
 function arraySum(data: Array<number>) {
   let ans = 0;
@@ -385,13 +419,12 @@ interface DiceResponse {
   failure: boolean;
   critical: boolean;
   fumble: boolean;
-  rands: [
-    {
-      kind: string;
-      sides: number;
-      value: number;
-    }
-  ];
+  rands: DiceResponseRands[];
+}
+interface DiceResponseRands {
+  kind: string;
+  sides: number;
+  value: number;
 }
 
 const diceExec = async (diceCommand: string) => {
