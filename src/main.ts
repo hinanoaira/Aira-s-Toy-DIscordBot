@@ -344,8 +344,13 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.on("messageCreate", async (message: Message) => {
+  const regex =
+    /^S?([+\-(]*(\d+|D\d+)|\d+B\d+|\d+T[YZ]\d+|C[+\-(]*\d+|choice|D66|(repeat|rep|x)\d+|\d+R\d+|\d+U\d+|BCDiceVersion|CCB?|RESB?|CBRB?)/;
   try {
-    if (!message.member?.user.bot) {
+    if (
+      !message.member?.user.bot &&
+      regex.test(message.content.toUpperCase())
+    ) {
       const diceAnswer = await diceExec(message.content);
       if (diceAnswer != null) {
         const ans = diceAnswer.text.replace(/＞/g, "→");
