@@ -24,6 +24,7 @@ pgClient.connect();
 
 const token = process.env.TOKEN;
 const debug = process.env.DEBUG;
+const escapeRegex = /(\*|\_|\~|\||\`)/g;
 if (token === undefined) throw Error("token invalid");
 
 const apiClient = axios.create({
@@ -150,7 +151,7 @@ client.on("interactionCreate", async (interaction) => {
         rawFortune = user.rows[0]["fortune"];
         fortune = rawFortune * 5;
 
-        firstDice = (await diceExec("3d6"))!;
+        firstDice = (await diceExec("3d6*5"))!;
         firstDiceSumed = arraySum(firstDice.rands.map((i) => i.value));
         todayfortune = firstDiceSumed * 5;
         resultFortune = Math.floor((todayfortune + fortune) / 2);
@@ -209,9 +210,9 @@ client.on("interactionCreate", async (interaction) => {
         resultFortune = Math.floor((todayfortune + fortune) / 2);
         firstDice = {
           ok: true,
-          text: `(3D6) ＞ ${firstDiceSumed}[${firstRands.join(
-            ","
-          )}] ＞ ${firstDiceSumed}`,
+          text: `(3D6*5) ＞ ${firstDiceSumed}[${firstRands.join(",")}]*5 ＞ ${
+            firstDiceSumed * 5
+          }`,
           secret: false,
           success: false,
           failure: false,
@@ -281,7 +282,7 @@ client.on("interactionCreate", async (interaction) => {
           },
           {
             name: "今日の幸運",
-            value: firstDice.text,
+            value: textEscape(firstDice.text),
           },
           {
             name: "幸運値",
@@ -391,10 +392,10 @@ client.on("messageCreate", async (message: Message) => {
       if (diceAnswer != null) {
         if (diceAnswer.secret) {
           const dm = await message.member?.user.createDM();
-          dm?.send(diceAnswer.text);
+          dm?.send(textEscape(diceAnswer.text));
           await message.reply("シークレットダイス");
         } else {
-          await message.reply(diceAnswer.text);
+          await message.reply(textEscape(diceAnswer.text));
         }
       }
     }
@@ -445,6 +446,10 @@ const diceExec = async (diceCommand: string) => {
   } catch (e) {
     return null;
   }
+};
+
+const textEscape = (text: string) => {
+  return text.replace(escapeRegex, "\\$1");
 };
 
 function getRequiredSenkaByBox(boxNo: Number) {
