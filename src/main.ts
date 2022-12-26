@@ -302,10 +302,12 @@ client.on("interactionCreate", async (interaction) => {
           }
         );
       if (!todayCheck && debug != "true") {
-        embed.addField(
-          "備考",
-          "本日はすでに引いているため、前回の結果を表示しています。"
-        );
+        embed
+          .addField(
+            "備考",
+            "本日はすでに引いているため、前回の結果を表示しています。"
+          )
+          .setImage("https://i.imgur.com/M7tqH51.png");
       }
       let username = (
         await interaction.guild?.members.fetch({ user: [interaction.user.id] })
