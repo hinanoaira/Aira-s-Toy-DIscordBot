@@ -298,7 +298,7 @@ client.on("interactionCreate", async (interaction) => {
           },
           {
             name: "今日のひとこと",
-            value: word,
+            value: word.replace(/\{username\}/g, interaction.user.username),
           }
         );
       if (!todayCheck && debug != "true") {
