@@ -469,8 +469,11 @@ try {
 
 const app: express.Express = express();
 const port = process.env.PORT || 3000;
-app.get("/*", (_, res: express.Response) => {
+app.get("/", (_, res: express.Response) => {
   res.send(`${client.user?.tag ?? "none"}`);
+});
+app.get("/gone", (_, res: express.Response) => {
+  res.status(404).send('Gone.');
 });
 app.listen(port, () => {
   console.log(`Listening: http://localhost:${port}`);
