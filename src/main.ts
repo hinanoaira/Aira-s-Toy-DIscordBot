@@ -473,7 +473,7 @@ app.get("/", (_, res: express.Response) => {
   res.send(`${client.user?.tag ?? "none"}`);
 });
 app.get("/gone", (_, res: express.Response) => {
-  res.status(404).send('Gone.');
+  res.status(410).send('Gone.');
 });
 app.listen(port, () => {
   console.log(`Listening: http://localhost:${port}`);
