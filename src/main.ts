@@ -8,23 +8,38 @@ import {
   ColorResolvable,
 } from "discord.js";
 import { fortuneComments } from "./fortuneComments";
-import express from "express";
 import axios from "axios";
-
 import PgClient from "pg";
+
+interface DiceResponseRands {
+  kind: string;
+  sides: number;
+  value: number;
+}
+interface DiceResponse {
+  ok: boolean;
+  text: string;
+  secret: boolean;
+  success: boolean;
+  failure: boolean;
+  critical: boolean;
+  fumble: boolean;
+  rands: DiceResponseRands[];
+}
+
 const pgClient = new PgClient.Client({
   user: process.env.PGUSER,
   password: process.env.PGPASS,
   host: process.env.PGHOST, // 詳細は後述
   database: process.env.PGDB,
   port: 5432,
-  ssl: true,
+  ssl: false,
 });
 pgClient.connect();
 
 const token = process.env.TOKEN;
 const debug = process.env.DEBUG;
-const escapeRegex = /(\*|\_|\~|\||\`)/g;
+const escapeRegex = /(\*|_|~|\||`)/g;
 if (token === undefined) throw Error("token invalid");
 
 const apiClient = axios.create({
@@ -122,7 +137,7 @@ client.on("interactionCreate", async (interaction) => {
           `select * from users where id='${interaction.user.id}'`
         );
       }
-      const dbTimeStamp: Date = user.rows[0]["last_time"];
+      const dbTimeStamp: Date = user.rows[0].last_time;
       const nowTimeStamp = new Date();
       const colors: { [index: string]: ColorResolvable } = {
         大吉: "#66ffff",
@@ -143,12 +158,12 @@ client.on("interactionCreate", async (interaction) => {
       let fortune: number;
       let resultFortune: number;
       const todayCheck =
-        dbTimeStamp.getDate() != nowTimeStamp.getDate() ||
-        dbTimeStamp.getMonth() != nowTimeStamp.getMonth() ||
-        dbTimeStamp.getFullYear() != nowTimeStamp.getFullYear();
-      if (todayCheck || debug == "true") {
+        dbTimeStamp.getDate() !== nowTimeStamp.getDate() ||
+        dbTimeStamp.getMonth() !== nowTimeStamp.getMonth() ||
+        dbTimeStamp.getFullYear() !== nowTimeStamp.getFullYear();
+      if (todayCheck || debug === "true") {
         timeStamp = nowTimeStamp;
-        rawFortune = user.rows[0]["fortune"];
+        rawFortune = user.rows[0].fortune;
         fortune = rawFortune * 5;
 
         firstDice = (await diceExec("3d6*5"))!;
@@ -165,17 +180,17 @@ client.on("interactionCreate", async (interaction) => {
 
         let nextFortune: number;
 
-        const lastDiff = rawFortune - user.rows[0]["last_fortune"];
+        const lastDiff = rawFortune - user.rows[0].last_fortune;
 
         let coefficient: number;
         if (secondDice.success) {
-          if (lastDiff < 0 && user.rows[0]["last_second"] < 96) {
+          if (lastDiff < 0 && user.rows[0].last_second < 96) {
             coefficient = lastDiff - 1;
           } else {
             coefficient = -1;
           }
         } else {
-          if (lastDiff > 0 && user.rows[0]["last_second"] > 5) {
+          if (lastDiff > 0 && user.rows[0].last_second > 5) {
             coefficient = lastDiff + 1;
           } else {
             coefficient = 1;
@@ -200,12 +215,12 @@ client.on("interactionCreate", async (interaction) => {
         console.log(querty);
         await pgClient.query(querty);
       } else {
-        const firstRands: number[] = user.rows[0]["last_first"];
-        word = user.rows[0]["last_word"];
+        const firstRands: number[] = user.rows[0].last_first;
+        word = user.rows[0].last_word;
         timeStamp = dbTimeStamp;
         firstDiceSumed = arraySum(firstRands);
         todayfortune = firstDiceSumed * 5;
-        rawFortune = user.rows[0]["last_fortune"];
+        rawFortune = user.rows[0].last_fortune;
         fortune = rawFortune * 5;
         resultFortune = Math.floor((todayfortune + fortune) / 2);
         firstDice = {
@@ -222,7 +237,7 @@ client.on("interactionCreate", async (interaction) => {
             return { kind: "normal", sides: 6, value: e };
           }),
         };
-        const secondRands: number[] = [user.rows[0]["last_second"]];
+        const secondRands: number[] = [user.rows[0].last_second];
         const success = secondRands[0] <= resultFortune;
         const critical = secondRands[0] <= 5;
         const fumble = secondRands[0] >= 96;
@@ -301,7 +316,7 @@ client.on("interactionCreate", async (interaction) => {
             value: word.replace(/\{username\}/g, interaction.user.username),
           }
         );
-      if (!todayCheck && debug != "true") {
+      if (!todayCheck && debug !== "true") {
         embed
           .addField(
             "備考",
@@ -414,22 +429,6 @@ function arraySum(data: Array<number>) {
   return ans;
 }
 
-interface DiceResponse {
-  ok: boolean;
-  text: string;
-  secret: boolean;
-  success: boolean;
-  failure: boolean;
-  critical: boolean;
-  fumble: boolean;
-  rands: DiceResponseRands[];
-}
-interface DiceResponseRands {
-  kind: string;
-  sides: number;
-  value: number;
-}
-
 const diceExec = async (diceCommand: string) => {
   try {
     const { data }: { data: DiceResponse } = await apiClient.get(
@@ -454,7 +453,7 @@ const textEscape = (text: string) => {
   return text.replace(escapeRegex, "\\$1");
 };
 
-function getRequiredSenkaByBox(boxNo: Number) {
+function getRequiredSenkaByBox(boxNo: number) {
   if (boxNo <= 4) return 2200;
   if (boxNo <= 45) return 2000;
   if (boxNo <= 80) return 10000;
@@ -466,15 +465,3 @@ try {
 } catch (e) {
   console.log(e);
 }
-
-const app: express.Express = express();
-const port = process.env.PORT || 3000;
-app.get("/", (_, res: express.Response) => {
-  res.send(`${client.user?.tag ?? "none"}`);
-});
-app.get("/gone", (_, res: express.Response) => {
-  res.status(410).send('Gone.');
-});
-app.listen(port, () => {
-  console.log(`Listening: http://localhost:${port}`);
-});
